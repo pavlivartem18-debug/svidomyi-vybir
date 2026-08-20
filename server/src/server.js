@@ -8,6 +8,7 @@ import { getDb, save, uid } from './db.js';
 import { signToken, auth, adminOnly, publicUser } from './auth.js';
 import { sendEmail, makeVerifyToken, makeResetToken, hash, compare } from './mailer.js';
 import { seedIfEmpty } from './seed.js';
+import { initDb } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
@@ -29,10 +30,8 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-seedIfEmpty();
-
 // Базове посилання для email-посилань (верифікація, скидання пароля):
-// використовуємо origin запиту, щоб посилання працювали і через тунель.
+// використовуємо origin запиту, щоб посилання працювали і на проді, і локально
 const linkBase = (req) => req.headers.origin || 'http://localhost:4000';
 
 const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
@@ -390,4 +389,14 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`API сервер запущено: http://localhost:${PORT}`));
+
+// спершу підключаємо базу даних, потім сідаємо початкові дані і запускаємо сервер
+initDb()
+  .then(() => {
+    seedIfEmpty();
+    app.listen(PORT, () => console.log(`API сервер запущено: http://localhost:${PORT}`));
+  })
+  .catch((e) => {
+    console.error('Не вдалося підключити базу даних:', e.message);
+    process.exit(1);
+  });
