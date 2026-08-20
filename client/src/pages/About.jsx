@@ -76,7 +76,7 @@ export default function About() {
             rel="noreferrer"
             className="hover-lift flex items-center gap-4 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-rose-500 to-amber-400 p-5 text-white shadow-lg"
           >
-            <span className="text-4xl">📷</span>
+            <img src="/icons/logo.png" alt="" className="h-16 w-16 rounded-2xl border-2 border-white/60 object-cover shadow-lg" />
             <div>
               <p className="text-lg font-extrabold">@svidomyi_vybir</p>
               <p className="text-sm text-white/85">{lang === 'uk' ? 'Instagram обʼєднання — 1200+ підписників' : 'Our Instagram — 1200+ followers'}</p>

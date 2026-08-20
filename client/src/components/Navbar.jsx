@@ -109,9 +109,11 @@ export default function Navbar() {
     <header className="glass sticky top-0 z-40 border-b border-white/40 shadow-soft dark:border-slate-700/50">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
         <Link to="/" className="group flex items-center gap-2.5 text-lg font-extrabold text-slate-900 dark:text-white">
-          <span className="grad-accent-br flex h-9 w-9 items-center justify-center rounded-xl text-sm text-white shadow-accent transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
-            СВ
-          </span>
+          <img
+            src="/icons/logo.png"
+            alt="Свідомий Вибір"
+            className="h-9 w-9 rounded-xl object-cover shadow-accent transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"
+          />
           <span className="text-accent-gradient hidden sm:inline">{lang === 'uk' ? 'Свідомий Вибір' : 'Svidomyi Vybir'}</span>
         </Link>
 
