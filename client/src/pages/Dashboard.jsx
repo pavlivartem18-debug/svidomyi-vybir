@@ -60,9 +60,10 @@ export default function Dashboard() {
         <Card>
           <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">{t('dashboard.profile')}</h2>
           <form onSubmit={save} className="space-y-4">
-            <Field label={t('email')}>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-slate-700 dark:text-slate-200">{t('email')}</span>
               <input disabled value={user.email} className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-400 dark:border-slate-700 dark:bg-slate-900" />
-            </Field>
+            </label>
             <Field label={t('name')} value={form.name} onChange={set('name')} />
             <Field label={t('phone')} value={form.phone} onChange={set('phone')} />
 

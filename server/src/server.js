@@ -372,7 +372,8 @@ const DIST = path.join(__dirname, '..', '..', 'client', 'dist');
 if (fs.existsSync(DIST)) {
   // файли зі збитковими іменами можна кешувати назавжди
   app.use('/assets', express.static(path.join(DIST, 'assets'), { maxAge: '1y', immutable: true }));
-  app.use(express.static(DIST));
+  // index: false — щоб "/" обробився нижче, з заголовком no-cache
+  app.use(express.static(DIST, { index: false }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
     // головна сторінка ніколи не кешується, щоб браузер завжди брав свіжий сайт

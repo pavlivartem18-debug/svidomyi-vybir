@@ -21,11 +21,13 @@ export function Btn({ to, onClick, type = 'button', variant = 'primary', childre
 const inputCls =
   'w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-600';
 
-export function Field({ label, ...props }) {
+// children свідомо ігнорується: input — порожній елемент, і вкладені children
+// падають при рендері (саме це ламало сторінку кабінету)
+export function Field({ label, children, ...props }) {
   return (
     <label className="block text-sm">
       {label && <span className="mb-1 block font-medium text-slate-700 dark:text-slate-200">{label}</span>}
-      <input {...props} className={inputCls} />
+      <input {...props} />
     </label>
   );
 }
