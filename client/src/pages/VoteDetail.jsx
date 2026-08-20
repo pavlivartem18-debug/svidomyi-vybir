@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, useLang } from '../context.jsx';
-import { Btn, Alert, Card, Badge } from '../components/ui.jsx';
+import { Btn, Alert, Card, Badge, SuccessFX } from '../components/ui.jsx';
 
 export default function VoteDetail() {
   const { id } = useParams();
@@ -11,6 +11,7 @@ export default function VoteDetail() {
   const [v, setV] = useState(null);
   const [err, setErr] = useState(null);
   const [msg, setMsg] = useState(null);
+  const [justVoted, setJustVoted] = useState(false);
 
   const load = () => api('/api/votes/' + id).then(setV).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, [id]);
@@ -23,6 +24,7 @@ export default function VoteDetail() {
     try {
       const res = await api(`/api/votes/${v.id}/cast`, { method: 'POST', body: { option } });
       setMsg(res.message);
+      setJustVoted(true);
       load();
     } catch (e) { setErr(e.message); }
   };
@@ -63,6 +65,9 @@ export default function VoteDetail() {
         )}
         {v.myVote && (
           <div className="mt-5">
+            {justVoted ? (
+              <SuccessFX text={lang === 'uk' ? 'Ваш голос прийнято!' : 'Your vote is accepted!'} />
+            ) : null}
             <Alert kind="success">
               {lang === 'uk' ? 'Ваш голос прийнято' : 'Your vote is accepted'}: <b>{v.myVote}</b>
               {v.status === 'open' && (lang === 'uk' ? ' · змінити голос не можна' : ' · the vote cannot be changed')}

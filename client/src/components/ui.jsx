@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const variants = {
@@ -9,7 +10,8 @@ const variants = {
 };
 
 export function Btn({ to, onClick, type = 'button', variant = 'primary', children, className = '', disabled }) {
-  const cls = `btn-press inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`;
+  const shine = ['primary', 'accent'].includes(variant) ? 'btn-shine' : '';
+  const cls = `btn-press ${shine} inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`;
   if (to) return <Link to={to} className={cls}>{children}</Link>;
   return (
     <button type={type} onClick={onClick} disabled={disabled} className={cls}>
@@ -146,6 +148,105 @@ export function BarChart({ data, suffix = '' }) {
 export const Stars = ({ value }) => (
   <span className="text-amber-400">{'★'.repeat(value)}{'☆'.repeat(5 - value)}</span>
 );
+
+/* Лічильник, що плавно накручується до значення */
+export function CountUp({ value, duration = 1300, suffix = '' }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let raf;
+    const start = performance.now();
+    const step = (t) => {
+      const p = Math.min(1, (t - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 4);
+      setN(Math.round(eased * value));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  return <>{n}{suffix}</>;
+}
+
+/* 3D-нахил картки за курсором миші */
+export function Tilt({ children, className = '', max = 7 }) {
+  const ref = useRef(null);
+  const onMove = (e) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.transform = `perspective(800px) rotateY(${x * max}deg) rotateX(${-y * max}deg) translateY(-4px)`;
+  };
+  const onLeave = () => {
+    if (ref.current) ref.current.style.transform = '';
+  };
+  return (
+    <div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} className={`tilt-card ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+/* Градієнтне кільце прогресу, що плавно заповнюється */
+export function ProgressRing({ value, size = 120, stroke = 10, label }) {
+  const [offset, setOffset] = useState(0);
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  useEffect(() => {
+    const t = setTimeout(() => setOffset(c - (Math.min(100, value) / 100) * c), 150);
+    return () => clearTimeout(t);
+  }, [value, c]);
+  return (
+    <div className="relative inline-block" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} fill="none" className="stroke-slate-100 dark:stroke-slate-700" />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} fill="none" strokeLinecap="round"
+          stroke="url(#ringGrad)" strokeDasharray={c} strokeDashoffset={offset}
+          className="ring-draw"
+        />
+        <defs>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
+          <CountUp value={value} />
+        </span>
+        {label && <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</span>}
+      </div>
+    </div>
+  );
+}
+
+/* Ефект успіху: намальована галочка + конфеті */
+export function SuccessFX({ text }) {
+  const colors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+  return (
+    <div className="anim-pop relative mx-auto w-56 overflow-visible py-2 text-center">
+      <svg className="mx-auto h-16 w-16" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="24" fill="none" stroke="#10b981" strokeWidth="2.5" className="check-draw" />
+        <path d="M15 27l7.5 7.5L37 19" fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="check-draw" style={{ animationDelay: '0.25s' }} />
+      </svg>
+      {text && <p className="mt-1 font-bold text-emerald-600 dark:text-emerald-400">{text}</p>}
+      {Array.from({ length: 14 }).map((_, i) => (
+        <span
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: `${5 + i * 6.8}%`,
+            background: colors[i % colors.length],
+            animationDelay: `${(i % 7) * 0.07}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export const fmtDate = (iso, lang = 'uk') =>
   new Date(iso).toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', {

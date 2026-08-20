@@ -96,12 +96,12 @@ body {
   50% { box-shadow: 0 0 0 8px rgb(239 68 68 / 0); }
 }
 
-.anim-fade-up { animation: fadeUp 0.5s ease both; }
-.anim-pop { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-.anim-slide-down { animation: slideDown 0.25s ease both; }
-.anim-float { animation: float 4s ease-in-out infinite; }
-.anim-wiggle { animation: wiggle 0.7s ease-in-out infinite; }
-.anim-pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+.anim-fade-up { animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-pop { animation: popIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.anim-slide-down { animation: slideDown 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-float { animation: float 5s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.anim-wiggle { animation: wiggle 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.anim-pulse-glow { animation: pulseGlow 2.4s ease-in-out infinite; }
 
 /* «живий» градієнт гойдається */
 .animated-gradient {
@@ -115,8 +115,8 @@ body {
 /* появлення блоків при скролі */
 .reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(28px) scale(0.985);
+  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
 .reveal.is-visible {
@@ -126,22 +126,116 @@ body {
 
 /* картки піднімаються при наведенні */
 .hover-lift {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 28px -10px rgb(15 23 42 / 0.25);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 36px -12px rgb(15 23 42 / 0.28);
 }
 
 /* кнопки: підйом при наведенні, пружина при натисканні */
 .btn-press {
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 .btn-press:hover {
-  transform: translateY(-1px) scale(1.02);
+  transform: translateY(-2px) scale(1.03);
 }
 .btn-press:active {
   transform: scale(0.95);
+}
+
+/* пробігання блиску по кнопці */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -90%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(105deg, transparent, rgb(255 255 255 / 0.4), transparent);
+  transform: skewX(-22deg);
+  transition: left 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-shine:hover::after {
+  left: 140%;
+}
+
+/* 3D-нахил картки за курсором */
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* градієнт тече крізь текст */
+.text-gradient-flow {
+  background: linear-gradient(90deg, #2563eb, #059669, #7c3aed, #2563eb);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradientFlow 6s linear infinite;
+}
+@keyframes gradientFlow {
+  to { background-position: 300% center; }
+}
+
+/* скелетон-завантаження з мерехтінням */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgb(226 232 240 / 0.6);
+  border-radius: 1rem;
+}
+.dark .skeleton {
+  background: rgb(51 65 85 / 0.5);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: shimmer 1.6s infinite;
+}
+.dark .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgb(148 163 184 / 0.18), transparent);
+}
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* намальована галочка успіху */
+.check-draw {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: drawStroke 0.7s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+@keyframes drawStroke {
+  to { stroke-dashoffset: 0; }
+}
+
+/* конфеті */
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 14px;
+  top: 10px;
+  border-radius: 2px;
+  animation: confettiFall 1.5s cubic-bezier(0.15, 0.6, 0.4, 1) forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(190px) rotate(560deg) scale(0.5); opacity: 0; }
+}
+
+/* анімоване градієнтне кільце прогресу */
+.ring-draw {
+  transition: stroke-dashoffset 1.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* фото збільшується всередині картки */

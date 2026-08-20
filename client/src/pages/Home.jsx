@@ -1,18 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useLang } from '../context.jsx';
-import { Btn, Field, Alert } from '../components/ui.jsx';
+import { Btn, Field, Alert, CountUp, Tilt } from '../components/ui.jsx';
 import { NewsCard, EventCard } from '../components/Cards.jsx';
 import Reveal from '../components/Reveal.jsx';
 import { useSeo } from '../seo.js';
 
+const SkeletonCard = () => (
+  <div className="skeleton h-52 w-full sm:h-56" aria-hidden="true" />
+);
+
 export default function Home() {
   const { t, lang } = useLang();
-  const [news, setNews] = useState([]);
-  const [events, setEvents] = useState([]);
+  const [news, setNews] = useState(null);
+  const [events, setEvents] = useState(null);
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState(null);
   const [err, setErr] = useState(null);
+  const floatersRef = useRef(null);
   useSeo(lang === 'uk' ? 'Головна' : 'Home', 'Молодіжне обʼєднання «Свідомий Вибір»: новини, події, засідання, поіменні голосування, волонтерство');
 
   useEffect(() => {
@@ -22,6 +27,18 @@ export default function Home() {
       setEvents(list.filter((e) => e.startsAt >= now).slice(0, 3));
     });
   }, []);
+
+  // легкий паралакс: декоративні емодзі ледве рухаються за курсором
+  const heroMove = (e) => {
+    const el = floatersRef.current;
+    if (!el) return;
+    const x = (e.clientX / window.innerWidth - 0.5) * 26;
+    const y = (e.clientY / window.innerHeight - 0.5) * 20;
+    el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  };
+  const heroLeave = () => {
+    if (floatersRef.current) floatersRef.current.style.transform = '';
+  };
 
   const subscribe = async (e) => {
     e.preventDefault();
@@ -38,8 +55,8 @@ export default function Home() {
   return (
     <>
       {/* Герой */}
-      <section className="animated-gradient relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-500 text-white">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+      <section onMouseMove={heroMove} onMouseLeave={heroLeave} className="animated-gradient relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-500 text-white">
+        <div ref={floatersRef} className="pointer-events-none absolute inset-0 transition-transform duration-500 ease-out" aria-hidden="true">
           <span className="anim-float absolute left-[8%] top-[20%] text-5xl opacity-30" style={{ animationDelay: '0s' }}>🌱</span>
           <span className="anim-float absolute right-[10%] top-[24%] text-5xl opacity-30" style={{ animationDelay: '1.2s' }}>🗳️</span>
           <span className="anim-float absolute left-[16%] bottom-[18%] text-4xl opacity-25" style={{ animationDelay: '2.1s' }}>🤝</span>
@@ -68,23 +85,23 @@ export default function Home() {
         </svg>
       </section>
 
-      {/* Статистика */}
+      {/* Статистика: 3D-нахил + накручувані лічильники */}
       <section className="mx-auto -mt-2 max-w-6xl px-4">
         <div className="grid grid-cols-3 gap-3 sm:gap-5">
           {[
-            ['👥', '500+', t('members'), 'from-blue-500 to-indigo-500', 'shadow-soft-blue'],
-            ['🎪', events.length ? events.length + 10 : 12, t('eventsCount'), 'from-emerald-500 to-teal-500', 'shadow-soft-green'],
-            ['📰', news.length + 20, t('newsCount'), 'from-violet-500 to-fuchsia-500', 'shadow-soft-blue'],
-          ].map(([emoji, num, label, gradient, shadow], i) => (
-            <div
-              key={i}
-              className={`anim-pop hover-lift rounded-2xl bg-gradient-to-br ${gradient} ${shadow} p-5 text-center text-white sm:p-7`}
-              style={{ animationDelay: `${0.15 + i * 0.12}s` }}
-            >
-              <p className="text-2xl sm:text-3xl">{emoji}</p>
-              <p className="mt-1 text-3xl font-extrabold drop-shadow-sm sm:text-4xl">{num}</p>
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-white/80 sm:text-xs">{label}</p>
-            </div>
+            ['👥', 500, '+', t('members'), 'from-blue-500 to-indigo-500', 'shadow-soft-blue'],
+            ['🎪', events ? events.length + 10 : 12, '', t('eventsCount'), 'from-emerald-500 to-teal-500', 'shadow-soft-green'],
+            ['📰', news ? news.length + 20 : 24, '', t('newsCount'), 'from-violet-500 to-fuchsia-500', 'shadow-soft-blue'],
+          ].map(([emoji, num, suffix, label, gradient, shadow], i) => (
+            <Tilt key={i} className="anim-pop" >
+              <div className={`rounded-2xl bg-gradient-to-br ${gradient} ${shadow} p-5 text-center text-white sm:p-7`}>
+                <p className="text-2xl sm:text-3xl">{emoji}</p>
+                <p className="mt-1 text-3xl font-extrabold drop-shadow-sm sm:text-4xl">
+                  <CountUp value={num} suffix={suffix} />
+                </p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-white/80 sm:text-xs">{label}</p>
+              </div>
+            </Tilt>
           ))}
         </div>
       </section>
@@ -93,16 +110,18 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 py-12">
         <Reveal>
           <div className="mb-6 flex items-end justify-between">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('home.events')}</h2>
+            <h2 className="text-gradient-flow text-2xl font-bold sm:text-3xl">{t('home.events')}</h2>
             <Btn to="/events" variant="ghost">{t('details')} →</Btn>
           </div>
         </Reveal>
         <div className="grid gap-4 md:grid-cols-3">
-          {events.map((e, i) => (
-            <Reveal key={e.id} delay={i * 120}>
-              <EventCard event={e} compact />
-            </Reveal>
-          ))}
+          {events === null
+            ? [1, 2, 3].map((i) => <SkeletonCard key={i} />)
+            : events.map((e, i) => (
+                <Reveal key={e.id} delay={i * 120}>
+                  <EventCard event={e} compact />
+                </Reveal>
+              ))}
         </div>
       </section>
 
@@ -110,16 +129,18 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 pb-12">
         <Reveal>
           <div className="mb-6 flex items-end justify-between">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('home.news')}</h2>
+            <h2 className="text-gradient-flow text-2xl font-bold sm:text-3xl">{t('home.news')}</h2>
             <Btn to="/news" variant="ghost">{t('readMore')} →</Btn>
           </div>
         </Reveal>
         <div className="grid gap-6 md:grid-cols-3">
-          {news.map((n, i) => (
-            <Reveal key={n.id} delay={i * 120}>
-              <NewsCard news={n} />
-            </Reveal>
-          ))}
+          {news === null
+            ? [1, 2, 3].map((i) => <SkeletonCard key={i} />)
+            : news.map((n, i) => (
+                <Reveal key={n.id} delay={i * 120}>
+                  <NewsCard news={n} />
+                </Reveal>
+              ))}
         </div>
       </section>
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, imgUrl } from '../api.js';
 import { useAuth, useLang } from '../context.jsx';
-import { Field, TextArea, Btn, Alert, Card, fmtDateTime, Empty, Badge, Tabs, Stars } from '../components/ui.jsx';
+import { Field, TextArea, Btn, Alert, Card, fmtDateTime, Empty, Badge, Tabs, Stars, ProgressRing } from '../components/ui.jsx';
 import { interestCats } from '../i18n.js';
 
 /* ---------- Огляд ---------- */
@@ -26,13 +26,15 @@ function Overview() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="text-center">
-          <p className="text-xs font-semibold uppercase text-slate-400">
+        <Card className="anim-pop flex flex-col items-center justify-center">
+          <p className="mb-2 text-xs font-semibold uppercase text-slate-400">
             {lang === 'uk' ? 'Рейтинг активності' : 'Activity rating'}
           </p>
-          <p className="mt-1 text-4xl font-extrabold text-blue-600 dark:text-blue-400">
-            {rating ? rating.rating : '…'}<span className="text-lg text-slate-400">/100</span>
-          </p>
+          {rating ? (
+            <ProgressRing value={rating.rating} label="/100" size={110} />
+          ) : (
+            <div className="skeleton h-[110px] w-[110px] !rounded-full" />
+          )}
         </Card>
         <Card className="text-center">
           <p className="text-xs font-semibold uppercase text-slate-400">
