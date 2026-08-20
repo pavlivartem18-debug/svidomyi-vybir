@@ -229,13 +229,18 @@ app.post('/api/auth/2fa/disable', auth(), (req, res) => {
 app.get('/api/auth/me', auth(), (req, res) => res.json(publicUser(req.user)));
 
 app.put('/api/auth/me', auth(), upload.single('avatar'), (req, res) => {
-  const { name, surname, phone, about, birthday, interests, currentPassword, newPassword } = req.body || {};
+  const { name, surname, phone, about, birthday, interests, uiSettings, currentPassword, newPassword } = req.body || {};
   const user = req.user;
   if (name) user.name = name;
   if (surname !== undefined) user.surname = surname;
   if (phone !== undefined) user.phone = phone;
   if (about !== undefined) user.about = about;
   if (birthday !== undefined) user.birthday = birthday;
+  // персоналізація інтерфейсу (колір/фон/шрифт/анімації) — зберігаємо як є
+  if (uiSettings && typeof uiSettings === 'object') {
+    const allowed = ['accent', 'bg', 'fontScale', 'animLevel'];
+    user.uiSettings = Object.fromEntries(allowed.filter((k) => uiSettings[k] !== undefined).map((k) => [k, uiSettings[k]]));
+  }
   if (Array.isArray(interests)) user.interests = interests;
   if (req.file) user.avatar = `/uploads/${req.file.filename}`;
 

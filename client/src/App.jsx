@@ -25,6 +25,7 @@ import Jobs from './pages/Jobs.jsx';
 import Donate from './pages/Donate.jsx';
 import Privacy from './pages/Privacy.jsx';
 import { initGa } from './seo.js';
+import { PersonalizeProvider, AnimatedBackground } from './personalize.jsx';
 import { Login, Register, Forgot, Reset, VerifyEmail } from './pages/Auth.jsx';
 
 function Protected({ children, adminOnly = false }) {
@@ -38,7 +39,7 @@ function Protected({ children, adminOnly = false }) {
 function Shell() {
   const { pathname } = useLocation();
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="relative z-10 flex min-h-screen flex-col">
       <Navbar />
       <main key={pathname} className="page-enter flex-1">
         <Routes>
@@ -80,9 +81,12 @@ export default function App() {
   useEffect(() => { initGa(); }, []);
   return (
     <Providers>
-      <BrowserRouter>
-        <Shell />
-      </BrowserRouter>
+      <PersonalizeProvider>
+        <BrowserRouter>
+          <AnimatedBackground />
+          <Shell />
+        </BrowserRouter>
+      </PersonalizeProvider>
     </Providers>
   );
 }

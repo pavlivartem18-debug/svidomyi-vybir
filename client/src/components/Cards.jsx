@@ -35,7 +35,7 @@ export function EventCard({ event, compact = false }) {
   const d = new Date(event.startsAt);
   return (
     <article className="group hover-lift shadow-soft flex h-full gap-4 rounded-2xl bg-white p-5 dark:bg-slate-800">
-      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-soft-blue transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3">
+      <div className="grad-accent-br flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl text-white shadow-accent transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3">
         <span className="text-2xl font-extrabold leading-none">{d.getDate()}</span>
         <span className="text-[10px] uppercase">
           {d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', { month: 'short' })}

@@ -55,7 +55,7 @@ export default function Home() {
   return (
     <>
       {/* Герой */}
-      <section onMouseMove={heroMove} onMouseLeave={heroLeave} className="animated-gradient relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-500 text-white">
+      <section onMouseMove={heroMove} onMouseLeave={heroLeave} className="animated-gradient grad-accent-br relative overflow-hidden text-white">
         <div ref={floatersRef} className="pointer-events-none absolute inset-0 transition-transform duration-500 ease-out" aria-hidden="true">
           <span className="anim-float absolute left-[8%] top-[20%] text-5xl opacity-30" style={{ animationDelay: '0s' }}>🌱</span>
           <span className="anim-float absolute right-[10%] top-[24%] text-5xl opacity-30" style={{ animationDelay: '1.2s' }}>🗳️</span>
@@ -172,7 +172,7 @@ export default function Home() {
 
       {/* Розсилка */}
       <section className="mx-auto max-w-3xl px-4 py-12">
-        <div className="animated-gradient rounded-2xl bg-gradient-to-r from-blue-600 to-emerald-500 p-8 text-center text-white">
+        <div className="animated-gradient grad-accent-bg rounded-2xl p-8 text-center text-white">
           <h2 className="text-xl font-bold">{t('home.newsletter')}</h2>
           <p className="mt-1 text-sm text-blue-100">{t('home.newsletterText')}</p>
           <form onSubmit={subscribe} className="mx-auto mt-4 flex max-w-md gap-2">

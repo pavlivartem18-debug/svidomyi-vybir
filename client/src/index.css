@@ -8,6 +8,146 @@ body {
   scroll-behavior: smooth;
 }
 
+/* ============ ПЕРСОНАЛІЗАЦІЯ ============ */
+/* акцентні кольори теми — змінюються користувачем через налаштування */
+:root {
+  --accent-from: #2563eb;
+  --accent-to: #059669;
+}
+
+.grad-accent-bg {
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+}
+.grad-accent-br {
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+}
+.text-accent-gradient {
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.shadow-accent {
+  box-shadow: 0 8px 30px -6px color-mix(in srgb, var(--accent-from) 40%, transparent);
+}
+.btn-primary-grad {
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  color: #fff;
+}
+.btn-accent-grad {
+  background: linear-gradient(90deg, var(--accent-to), var(--accent-from));
+  color: #fff;
+}
+
+/* рівні анімацій */
+html.anim-lite *,
+html.anim-off * {
+  animation-duration: 0.01ms !important;
+}
+html.anim-lite * {
+  transition-duration: 0.15s !important;
+}
+html.anim-off * {
+  transition-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+/* ============ АНІМОВАНІ ФОНИ ============ */
+.bgfx {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* полярне сяйво: велетенські м'які плями повільно пливуть */
+.bgfx-aurora i {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.16;
+  animation: auroraDrift 26s ease-in-out infinite alternate;
+}
+.bgfx-aurora i:nth-child(1) { background: var(--accent-from); top: -20%; left: -10%; }
+.bgfx-aurora i:nth-child(2) { background: var(--accent-to); bottom: -25%; right: -12%; animation-duration: 32s; animation-direction: alternate-reverse; }
+.bgfx-aurora i:nth-child(3) { background: color-mix(in srgb, var(--accent-from) 50%, #8b5cf6); top: 30%; left: 35%; width: 40vmax; height: 40vmax; opacity: 0.12; animation-duration: 22s; }
+@keyframes auroraDrift {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(8vw, -5vh) scale(1.15) rotate(20deg); }
+  100% { transform: translate(-6vw, 6vh) scale(0.95) rotate(-15deg); }
+}
+
+/* зорі: мерехтливі точки з повільним дрейфом */
+.bgfx-stars i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent-from) 60%, white);
+  animation: starTwinkle 3.2s ease-in-out infinite;
+}
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.8); }
+  50% { opacity: 0.9; transform: scale(1.25); }
+}
+
+/* бульбашки: м'які кола спливають угору */
+.bgfx-bubbles i {
+  position: absolute;
+  bottom: -12vh;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--accent-from) 25%, transparent), transparent 70%);
+  animation: bubbleRise linear infinite;
+}
+@keyframes bubbleRise {
+  0% { transform: translateY(0) translateX(0) scale(0.9); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.5; }
+  100% { transform: translateY(-115vh) translateX(4vw) scale(1.05); opacity: 0; }
+}
+
+/* техно-сітка: перспективні лінії, що біжать */
+.bgfx-grid::before,
+.bgfx-grid::after {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent-from) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-from) 12%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.bgfx-grid::before { animation: gridMove 14s linear infinite; }
+.bgfx-grid::after {
+  background-size: 220px 220px;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent-to) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-to) 10%, transparent) 1px, transparent 1px);
+  animation: gridMove 34s linear infinite reverse;
+}
+@keyframes gridMove {
+  from { transform: perspective(600px) rotateX(20deg) translateY(0); }
+  to { transform: perspective(600px) rotateX(20deg) translateY(44px); }
+}
+
+/* хвилі: шари плавно коляться по колу */
+.bgfx-waves svg {
+  position: absolute;
+  bottom: -4%;
+  left: -50%;
+  width: 200%;
+  height: 34vh;
+}
+.bgfx-waves svg:nth-child(1) { animation: waveSlide 16s linear infinite; opacity: 0.16; }
+.bgfx-waves svg:nth-child(2) { animation: waveSlide 11s linear infinite reverse; opacity: 0.1; bottom: -8%; }
+@keyframes waveSlide {
+  from { transform: translateX(0); }
+  to { transform: translateX(50%); }
+}
+
 /* кольоровий вибір тексту та елегантний скролбар */
 ::selection {
   background: rgb(37 99 235 / 0.2);
@@ -237,6 +377,8 @@ body {
 .ring-draw {
   transition: stroke-dashoffset 1.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
+.ring-stop-a { stop-color: var(--accent-from); }
+.ring-stop-b { stop-color: var(--accent-to); }
 
 /* фото збільшується всередині картки */
 .zoom-img {

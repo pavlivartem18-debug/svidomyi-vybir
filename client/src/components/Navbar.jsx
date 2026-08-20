@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth, useLang, useTheme } from '../context.jsx';
 import { api } from '../api.js';
+import { SettingsModal } from '../personalize.jsx';
 
 function NotificationsBell() {
   const { t, lang } = useLang();
@@ -80,6 +81,7 @@ export default function Navbar() {
   const { dark, toggle } = useTheme();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const links = [
     ['/', t('nav.home')],
@@ -99,18 +101,18 @@ export default function Navbar() {
   const item = ({ isActive }) =>
     `rounded-full px-3 py-1.5 text-sm font-semibold transition ${
       isActive
-        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-soft-blue'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400'
+        ? 'grad-accent-bg text-white shadow-accent'
+        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
     }`;
 
   return (
     <header className="glass sticky top-0 z-40 border-b border-white/40 shadow-soft dark:border-slate-700/50">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
         <Link to="/" className="group flex items-center gap-2.5 text-lg font-extrabold text-slate-900 dark:text-white">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-emerald-500 text-sm text-white shadow-soft-blue transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
+          <span className="grad-accent-br flex h-9 w-9 items-center justify-center rounded-xl text-sm text-white shadow-accent transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
             СВ
           </span>
-          <span className="text-gradient hidden sm:inline">{lang === 'uk' ? 'Свідомий Вибір' : 'Svidomyi Vybir'}</span>
+          <span className="text-accent-gradient hidden sm:inline">{lang === 'uk' ? 'Свідомий Вибір' : 'Svidomyi Vybir'}</span>
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
@@ -136,7 +138,15 @@ export default function Navbar() {
           >
             {dark ? '☀️' : '🌙'}
           </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="rounded-lg border border-slate-300 px-2 py-1 text-sm transition-transform duration-300 hover:rotate-90 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+            title={lang === 'uk' ? 'Оформлення сайту' : 'Site appearance'}
+          >
+            ⚙️
+          </button>
           {user && <NotificationsBell />}
+          {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
           {user ? (
             <div className="hidden items-center gap-1 lg:flex">

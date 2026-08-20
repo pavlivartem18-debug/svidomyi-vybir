@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const variants = {
-  primary: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-soft-blue hover:shadow-lg',
-  accent: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-soft-green hover:shadow-lg',
-  outline: 'border-2 border-blue-600/70 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-slate-800',
+  primary: 'btn-primary-grad shadow-accent hover:shadow-lg',
+  accent: 'btn-accent-grad shadow-accent hover:shadow-lg',
+  outline: 'border-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-slate-800',
   ghost: 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
   danger: 'bg-gradient-to-r from-red-500 to-rose-500 text-white',
 };
@@ -208,8 +208,8 @@ export function ProgressRing({ value, size = 120, stroke = 10, label }) {
         />
         <defs>
           <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="100%" stopColor="#10b981" />
+            <stop offset="0%" class="ring-stop-a" />
+            <stop offset="100%" class="ring-stop-b" />
           </linearGradient>
         </defs>
       </svg>
