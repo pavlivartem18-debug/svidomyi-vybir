@@ -16,10 +16,10 @@ body {
 }
 
 .grad-accent-bg {
-  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  background-image: linear-gradient(90deg, var(--accent-from), var(--accent-to));
 }
 .grad-accent-br {
-  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  background-image: linear-gradient(135deg, var(--accent-from), var(--accent-to));
 }
 .text-accent-gradient {
   background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
@@ -39,17 +39,30 @@ body {
   color: #fff;
 }
 
-/* рівні анімацій */
-html.anim-lite *,
-html.anim-off * {
-  animation-duration: 0.01ms !important;
+/* рівні анімацій: керуємо лише ДЕКОРАТИВНИМИ циклами —
+   базові переходи й поява контенту працюють завжди, сайт не «вмирає» */
+html.anim-lite .anim-float,
+html.anim-lite .anim-wiggle,
+html.anim-lite .animated-gradient,
+html.anim-lite .text-gradient-flow,
+html.anim-lite .bgfx i,
+html.anim-lite .bgfx svg,
+html.anim-lite .bgfx-grid::before,
+html.anim-lite .bgfx-grid::after {
+  animation-duration: 6s !important;
 }
-html.anim-lite * {
-  transition-duration: 0.15s !important;
+html.anim-off .anim-float,
+html.anim-off .anim-wiggle,
+html.anim-off .animated-gradient,
+html.anim-off .text-gradient-flow,
+html.anim-off .bgfx i,
+html.anim-off .bgfx svg,
+html.anim-off .bgfx-grid::before,
+html.anim-off .bgfx-grid::after {
+  animation: none !important;
 }
-html.anim-off * {
-  transition-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
+html.anim-off .confetti-piece {
+  display: none;
 }
 
 /* ============ АНІМОВАНІ ФОНИ ============ */
@@ -89,6 +102,15 @@ html.anim-off * {
   }
   .bgfx-grid::after {
     display: none;
+  }
+  /* iOS/Safari: ефект скла в шапці дорого коштує — на phones робимо її щільнішою */
+  .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgb(255 255 255 / 0.96);
+  }
+  .dark .glass {
+    background: rgb(15 23 42 / 0.96);
   }
 }
 
@@ -270,16 +292,40 @@ button {
 /* перехід між сторінками */
 .page-enter { animation: fadeUp 0.35s ease both; }
 
-/* появлення блоків при скролі */
+/* появлення блоків при скролі: з легким розмиттям — кінематографічно */
 .reveal {
   opacity: 0;
   transform: translateY(28px) scale(0.985);
-  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: blur(6px);
+  transition:
+    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.85s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+  filter: none;
+}
+
+/* ковзне підкреслення посилань */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 2px;
+  width: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.link-underline:hover::after {
+  width: 100%;
 }
 
 /* картки піднімаються при наведенні */

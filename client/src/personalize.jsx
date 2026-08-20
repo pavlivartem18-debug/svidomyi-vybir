@@ -32,7 +32,14 @@ export const usePersonalize = () => useContext(PersonalizeCtx);
 
 function loadLocal() {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('uiSettings') || '{}') };
+    const saved = JSON.parse(localStorage.getItem('uiSettings') || '{}');
+    // одноразова міграція: старе «вимкнені» було надто агресивним — повертаємо повні анімації
+    if (saved.animLevel === 'off' && !localStorage.getItem('uiSettingsV2')) {
+      localStorage.setItem('uiSettingsV2', '1');
+      saved.animLevel = 'full';
+    }
+    localStorage.setItem('uiSettingsV2', '1');
+    return { ...DEFAULTS, ...saved };
   } catch {
     return { ...DEFAULTS };
   }
@@ -247,12 +254,15 @@ export function SettingsModal({ onClose }) {
 
         {/* Анімації */}
         <p className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{label('Рівень анімацій', 'Animation level')}</p>
+        <p className="mb-2 text-xs text-slate-400">
+          {label('Усі рівні зберігають плавність сайту — змінюється лише кількість декоративних рухів.', 'All levels keep the site smooth — only decorative motion changes.')}
+        </p>
         <div className="mb-6 grid grid-cols-3 gap-2">
           {[
-            ['full', label('Повні', 'Full'), '✨'],
-            ['lite', label('Менше', 'Lite'), '🎋'],
-            ['off', label('Вимкнені', 'Off'), '🧊'],
-          ].map(([key, name, icon]) => (
+            ['full', label('Повні ✨', 'Full'), label('усе живе', 'everything')],
+            ['lite', label('Легкі 🎋', 'Lite'), label('спокійніше', 'calmer')],
+            ['off', label('Тиша 🧊', 'Calm'), label('без декору', 'minimal')],
+          ].map(([key, name, hint]) => (
             <button
               key={key}
               onClick={() => save({ animLevel: key })}
@@ -263,7 +273,8 @@ export function SettingsModal({ onClose }) {
               }`}
               style={settings.animLevel === key ? { background: 'linear-gradient(135deg, var(--accent-from), var(--accent-to))' } : {}}
             >
-              {icon} {name}
+              {name}
+              <span className="block text-[10px] font-medium opacity-80">{hint}</span>
             </button>
           ))}
         </div>

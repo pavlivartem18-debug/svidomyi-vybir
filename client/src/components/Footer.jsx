@@ -20,14 +20,14 @@ export default function Footer() {
         <div>
           <p className="mb-2 font-semibold">{t('footer.nav')}</p>
           <ul className="space-y-1 text-sm text-slate-500 dark:text-slate-400">
-            <li><Link className="hover:text-blue-600" to="/about">{t('nav.about')}</Link></li>
-            <li><Link className="hover:text-blue-600" to="/events">{t('nav.events')}</Link></li>
-            <li><Link className="hover:text-blue-600" to="/news">{t('nav.news')}</Link></li>
-            <li><Link className="hover:text-blue-600" to="/volunteer">{t('nav.volunteer')}</Link></li>
-            <li><Link className="hover:text-blue-600" to="/jobs">{lang === 'uk' ? 'Вакансії' : 'Jobs'}</Link></li>
-            <li><Link className="hover:text-blue-600" to="/partners">{lang === 'uk' ? 'Партнери' : 'Partners'}</Link></li>
-            <li><Link className="hover:text-blue-600" to="/donate">{lang === 'uk' ? '💚 Підтримати' : '💚 Donate'}</Link></li>
-            <li><Link className="hover:text-blue-600" to="/privacy">{lang === 'uk' ? 'Політика конфіденційності' : 'Privacy policy'}</Link></li>
+            <li><Link className="link-underline" to="/about">{t('nav.about')}</Link></li>
+            <li><Link className="link-underline" to="/events">{t('nav.events')}</Link></li>
+            <li><Link className="link-underline" to="/news">{t('nav.news')}</Link></li>
+            <li><Link className="link-underline" to="/volunteer">{t('nav.volunteer')}</Link></li>
+            <li><Link className="link-underline" to="/jobs">{lang === 'uk' ? 'Вакансії' : 'Jobs'}</Link></li>
+            <li><Link className="link-underline" to="/partners">{lang === 'uk' ? 'Партнери' : 'Partners'}</Link></li>
+            <li><Link className="link-underline" to="/donate">{lang === 'uk' ? '💚 Підтримати' : '💚 Donate'}</Link></li>
+            <li><Link className="link-underline" to="/privacy">{lang === 'uk' ? 'Політика конфіденційності' : 'Privacy policy'}</Link></li>
           </ul>
         </div>
         <div>

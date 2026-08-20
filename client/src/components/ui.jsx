@@ -104,14 +104,14 @@ export function Empty({ children }) {
 
 export function Tabs({ tabs, active, onChange }) {
   return (
-    <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
+    <div className="shadow-soft mb-6 flex flex-wrap gap-1 rounded-2xl border border-slate-100 bg-white p-1.5 dark:border-slate-700/60 dark:bg-slate-800">
       {tabs.map(([key, label]) => (
         <button
           key={key}
           onClick={() => onChange(key)}
-          className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition sm:px-4 ${
+          className={`btn-press rounded-xl px-3 py-1.5 text-sm font-semibold transition sm:px-4 ${
             active === key
-              ? 'bg-blue-600 text-white'
+              ? 'grad-accent-bg shadow-accent text-white'
               : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
           }`}
         >
