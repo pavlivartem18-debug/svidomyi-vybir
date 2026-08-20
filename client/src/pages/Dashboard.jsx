@@ -129,7 +129,7 @@ function Profile() {
   const { user, applyUser } = useAuth();
   const { lang, t } = useLang();
   const [form, setForm] = useState({
-    name: user.name, surname: user.surname || '', phone: user.phone || '', about: user.about || '',
+    name: user.name, surname: user.surname || '', phone: user.phone || '', about: user.about || '', birthday: user.birthday || '',
   });
   const [interests, setInterests] = useState(user.interests || []);
   const [avatar, setAvatar] = useState(null);
@@ -189,6 +189,12 @@ function Profile() {
             className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-400 dark:border-slate-700 dark:bg-slate-900" />
         </label>
         <Field label={t('phone')} value={form.phone} onChange={set('phone')} />
+        <Field
+          label={lang === 'uk' ? 'Дата народження (для вітань 🎂)' : 'Birthday (for greetings 🎂)'}
+          type="date"
+          value={form.birthday}
+          onChange={set('birthday')}
+        />
         <TextArea label={lang === 'uk' ? 'Про себе' : 'About me'} value={form.about} onChange={set('about')} />
 
         <div>
@@ -353,6 +359,114 @@ function Reviews() {
   );
 }
 
+/* ---------- Досягнення та квест ---------- */
+function Achievements() {
+  const { lang } = useLang();
+  const [data, setData] = useState(null);
+  const [tg, setTg] = useState(null);
+  const [pushOn, setPushOn] = useState(Notification?.permission === 'granted');
+
+  useEffect(() => {
+    api('/api/me/achievements').then(setData).catch(() => {});
+    api('/me/telegram-link').then(setTg).catch(() => {});
+  }, []);
+
+  const enablePush = async () => {
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+      const { publicKey } = await api('/api/push/key');
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: publicKey,
+      });
+      await api('/api/push/subscribe', { method: 'POST', body: sub.toJSON() });
+      setPushOn(true);
+    } catch { /* браузер може не підтримувати */ }
+  };
+
+  if (!data) return <p className="text-slate-400">…</p>;
+
+  return (
+    <div className="space-y-6">
+      {tg?.botName && (
+        <Card>
+          <h3 className="font-bold text-slate-900 dark:text-white">🔔 {lang === 'uk' ? 'Сповіщення' : 'Notifications'}</h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {lang === 'uk' ? 'Обирайте, як отримувати сповіщення організації:' : 'Choose how to receive notifications:'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <a
+              href={`https://t.me/${tg.botName}?start=${tg.code}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+            >
+              ✈️ Telegram
+            </a>
+            {!pushOn ? (
+              <button onClick={enablePush} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                📱 {lang === 'uk' ? 'Push на телефон' : 'Phone push'}
+              </button>
+            ) : (
+              <span className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-600 dark:bg-slate-700 dark:text-emerald-300">
+                ✅ Push {lang === 'uk' ? 'увімкнено' : 'enabled'}
+              </span>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {!data.quest.done && (
+        <Card className="border-l-4 !border-l-amber-400">
+          <h3 className="font-bold text-amber-500">
+            🚀 {lang === 'uk' ? 'Квест новачка: стань частиною команди!' : 'Newcomer quest'}
+          </h3>
+          <ul className="mt-2 space-y-1.5 text-sm">
+            {data.quest.steps.map((s, i) => (
+              <li key={i} className={s.done ? 'text-emerald-500 line-through' : 'text-slate-600 dark:text-slate-300'}>
+                {s.done ? '✅' : '⬜'} {s.title}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-slate-900 dark:text-white">
+          🏆 {lang === 'uk' ? 'Досягнення' : 'Achievements'}
+        </h3>
+        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+          {data.unlocked}/{data.total}
+        </span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {data.achievements.map((a) => (
+          <div
+            key={a.code}
+            className={`rounded-xl border p-4 text-center transition ${
+              a.done
+                ? 'border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-slate-800'
+                : 'border-slate-200 bg-white opacity-60 dark:border-slate-700 dark:bg-slate-800'
+            }`}
+          >
+            <p className={`text-3xl ${a.done ? '' : 'grayscale'}`}>{a.icon}</p>
+            <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">{a.title}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{a.desc}</p>
+            {a.progress && !a.done && (
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-full rounded-full bg-blue-500" style={{ width: `${(a.progress[0] / a.progress[1]) * 100}%` }} />
+              </div>
+            )}
+            {a.done && <p className="mt-1 text-[10px] font-bold uppercase text-amber-500">✓ {lang === 'uk' ? 'отримано' : 'unlocked'}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Головна сторінка кабінету ---------- */
 export default function Dashboard() {
   const { user } = useAuth();
@@ -360,8 +474,8 @@ export default function Dashboard() {
   const [tab, setTab] = useState('overview');
 
   const tabs = lang === 'uk'
-    ? [['overview', '📋 Огляд'], ['profile', '👤 Профіль'], ['meetings', '🗓️ Засідання'], ['votes', '🗳️ Голосування'], ['events', '🎪 Події'], ['reviews', '💬 Відгуки']]
-    : [['overview', '📋 Overview'], ['profile', '👤 Profile'], ['meetings', '🗓️ Meetings'], ['votes', '🗳️ Votes'], ['events', '🎪 Events'], ['reviews', '💬 Reviews']];
+    ? [['overview', '📋 Огляд'], ['profile', '👤 Профіль'], ['achievements', '🏆 Досягнення'], ['meetings', '🗓️ Засідання'], ['votes', '🗳️ Голосування'], ['events', '🎪 Події'], ['reviews', '💬 Відгуки']]
+    : [['overview', '📋 Overview'], ['profile', '👤 Profile'], ['achievements', '🏆 Achievements'], ['meetings', '🗓️ Meetings'], ['votes', '🗳️ Votes'], ['events', '🎪 Events'], ['reviews', '💬 Reviews']];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -373,6 +487,7 @@ export default function Dashboard() {
         <Tabs tabs={tabs} active={tab} onChange={setTab} />
         {tab === 'overview' && <Overview />}
         {tab === 'profile' && <Profile />}
+        {tab === 'achievements' && <Achievements />}
         {tab === 'meetings' && <MeetingsEmbed />}
         {tab === 'votes' && <MyVotes />}
         {tab === 'events' && <MyEvents />}

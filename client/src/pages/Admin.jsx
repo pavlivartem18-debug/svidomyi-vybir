@@ -262,6 +262,9 @@ function MeetingsTab() {
                 </p>
               </div>
               <div className="flex gap-2">
+                <Btn to={`/meetings/${m.id}/protocol`} variant="outline" className="!px-3 !py-1 text-xs">
+                  📄 {lang === 'uk' ? 'Протокол' : 'Protocol'}
+                </Btn>
                 <Btn
                   onClick={() => {
                     setEditing(m.id);
@@ -744,6 +747,353 @@ function ListTab({ list }) {
   );
 }
 
+/* ---------- Налаштування (GA, Telegram, донати, модерація) + бекапи + імпорт + дайджест ---------- */
+function SettingsTab() {
+  const { lang } = useLang();
+  const [s, setS] = useState(null);
+  const [tgToken, setTgToken] = useState('');
+  const [csv, setCsv] = useState('');
+  const [backups, setBackups] = useState([]);
+  const [msg, setMsg] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+
+  const loadAll = () => {
+    api('/api/settings').then(setS).catch(() => {});
+    api('/api/admin/backups').then(setBackups).catch(() => {});
+  };
+  useEffect(() => { loadAll(); }, []);
+
+  const saveSettings = async (e) => {
+    e.preventDefault();
+    setMsg(null);
+    await api('/api/admin/settings', { method: 'PUT', body: s });
+    setMsg(lang === 'uk' ? 'Налаштування збережено' : 'Settings saved');
+  };
+
+  const linkTelegram = async () => {
+    setMsg(null);
+    try {
+      const r = await api('/api/admin/telegram/token', { method: 'POST', body: { token: tgToken } });
+      setMsg(`✅ Telegram-бот @${r.botName} підключений!`);
+      setTgToken('');
+      loadAll();
+    } catch (ex) { setMsg('❌ ' + ex.message); }
+  };
+
+  const importCsv = async () => {
+    setImportResult(null);
+    const r = await api('/api/admin/import-users', { method: 'POST', body: { csv } });
+    setImportResult(r);
+  };
+
+  const backupDownload = async (id, day) => {
+    const res = await fetch(`/api/admin/backups/${id}/download`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-${day}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!s) return <p className="text-slate-400">…</p>;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <h3 className="font-bold text-slate-900 dark:text-white">⚙️ {lang === 'uk' ? 'Загальні налаштування' : 'General settings'}</h3>
+        <form onSubmit={saveSettings} className="mt-3 space-y-3">
+          <Field
+            label={lang === 'uk' ? 'Google Analytics ID (напр. G-XXXXXXX) — статистика відвідувань' : 'Google Analytics ID'}
+            value={s.gaId || ''}
+            onChange={(e) => setS({ ...s, gaId: e.target.value })}
+            placeholder="G-XXXXXXXXXX"
+          />
+          <TextArea
+            label={lang === 'uk' ? 'Реквізити для донатів (сторінка «Підтримати»)' : 'Donation details'}
+            value={s.donationDetails || ''}
+            onChange={(e) => setS({ ...s, donationDetails: e.target.value })}
+            placeholder="IBAN: UA... · Mono: https://send.monobank.ua/..."
+          />
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!s.commentModeration}
+              onChange={(e) => setS({ ...s, commentModeration: e.target.checked })}
+            />
+            {lang === 'uk' ? 'Модерація коментарів (перевірка перед публікацією)' : 'Comment moderation'}
+          </label>
+          {msg && <p className="text-sm text-emerald-500">{msg}</p>}
+          <Btn type="submit">{lang === 'uk' ? 'Зберегти' : 'Save'}</Btn>
+        </form>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold text-slate-900 dark:text-white">✈️ Telegram-бот</h3>
+        {s.telegramLinked ? (
+          <p className="mt-2 text-sm text-emerald-500">✅ @{s.telegramBotName} {lang === 'uk' ? 'підключений' : 'connected'}</p>
+        ) : (
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {lang === 'uk'
+              ? 'Створіть бота у @BotFather (команда /newbot), скопіюйте токен і вставте тут:'
+              : 'Create a bot with @BotFather (/newbot), then paste the token:'}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <input
+            value={tgToken}
+            onChange={(e) => setTgToken(e.target.value)}
+            placeholder="123456:ABC-DEF..."
+            className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
+          />
+          <Btn onClick={linkTelegram}>{lang === 'uk' ? 'Підключити' : 'Connect'}</Btn>
+        </div>
+        <p className="mt-2 text-xs text-slate-400">
+          {lang === 'uk'
+            ? 'Члени організації підписуються в кабінеті (розділ «Досягнення») — надсилають боту свій код і отримують сповіщення.'
+            : 'Members subscribe from their dashboard (Achievements tab).'}
+        </p>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold text-slate-900 dark:text-white">💾 {lang === 'uk' ? 'Резервні копії' : 'Backups'}</h3>
+        <p className="mt-1 text-xs text-slate-400">
+          {lang === 'uk' ? 'Автоматично щодня, зберігаються останні 7 днів.' : 'Automatic daily, last 7 kept.'}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Btn
+            onClick={async () => { await api('/api/admin/backup-now', { method: 'POST' }); loadAll(); }}
+            variant="accent"
+          >
+            {lang === 'uk' ? 'Створити бекап зараз' : 'Backup now'}
+          </Btn>
+        </div>
+        <ul className="mt-3 space-y-1 text-sm">
+          {backups.map((b) => (
+            <li key={b.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+              <span>{b.day} · {(b.size / 1024).toFixed(1)} КБ</span>
+              <button onClick={() => backupDownload(b.id, b.day)} className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                ⬇ {lang === 'uk' ? 'скачати' : 'download'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold text-slate-900 dark:text-white">📋 {lang === 'uk' ? 'Імпорт учасників з Excel (CSV)' : 'Import members from CSV'}</h3>
+        <p className="mt-1 text-xs text-slate-400">
+          {lang === 'uk'
+            ? 'Формат рядка: Імʼя;Прізвище;Email;Телефон;ДатаНародження (Excel → Зберегти як CSV)'
+            : 'Row format: Name;Surname;Email;Phone;Birthday'}
+        </p>
+        <TextArea rows={4} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder={'Олена;Ковальчук;olena@mail.ua;+380501234567;2005-03-14'} />
+        <Btn onClick={importCsv} className="mt-2">{lang === 'uk' ? 'Імпортувати' : 'Import'}</Btn>
+        {importResult && (
+          <div className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm dark:bg-slate-900">
+            <p className="font-bold text-emerald-600">
+              ✅ {lang === 'uk' ? 'Додано' : 'Created'}: {importResult.createdCount} · {lang === 'uk' ? 'пропущено' : 'skipped'}: {importResult.skipped.length}
+            </p>
+            {importResult.created.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs text-slate-500">
+                  {lang === 'uk' ? 'Тимчасові пароли (передайте учасникам)' : 'Temporary passwords'}
+                </summary>
+                <ul className="mt-1 max-h-40 overflow-y-auto text-xs">
+                  {importResult.created.map((c) => (
+                    <li key={c.email}>{c.email} → <b>{c.password}</b></li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <h3 className="font-bold text-slate-900 dark:text-white">📰 {lang === 'uk' ? 'Тижневий дайджест' : 'Weekly digest'}</h3>
+        <p className="mt-1 text-xs text-slate-400">
+          {lang === 'uk'
+            ? 'Збирає новини, засідання та найближчі події тижня і надсилає всім членам (сайт + Telegram + push).'
+            : 'Sends the week\'s news, meetings and upcoming events to all members.'}
+        </p>
+        <Btn
+          onClick={async () => { const r = await api('/api/admin/digest', { method: 'POST' }); setMsg(r.message); }}
+          variant="accent"
+          className="mt-3"
+        >
+          {lang === 'uk' ? 'Надіслати зараз' : 'Send now'}
+        </Btn>
+      </Card>
+    </div>
+  );
+}
+
+/* ---------- Журнал входів ---------- */
+function LoginLogsTab() {
+  const { lang } = useLang();
+  const [logs, setLogs] = useState(null);
+  useEffect(() => { api('/api/admin/login-logs').then(setLogs); }, []);
+  if (!logs) return <p className="text-slate-400">…</p>;
+  if (logs.length === 0) return <Empty>{lang === 'uk' ? 'Журнал порожній' : 'Empty log'}</Empty>;
+  return (
+    <ul className="space-y-1 text-sm">
+      {logs.map((l) => (
+        <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+          <span>
+            {l.ok ? '✅' : '❌'} <b>{l.name || l.email}</b>
+            <span className="ml-2 text-xs text-slate-400">{new Date(l.at).toLocaleString('uk-UA')}</span>
+          </span>
+          <span className="text-xs text-slate-400">{l.ip} · {l.userAgent.slice(0, 40)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ---------- Коментарі (модерація) ---------- */
+function CommentsTab() {
+  const { lang } = useLang();
+  const [items, setItems] = useState([]);
+  const load = () => api('/api/admin/comments').then(setItems);
+  useEffect(() => { load(); }, []);
+  if (items.length === 0) return <Empty>{lang === 'uk' ? 'Коментарів поки немає' : 'No comments yet'}</Empty>;
+  return (
+    <ul className="space-y-2">
+      {items.map((c) => (
+        <li key={c.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+          <p className="font-semibold text-slate-900 dark:text-white">
+            {c.userName}
+            {c.status === 'pending' && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-600 dark:bg-slate-700">на модерації</span>}
+            <span className="ml-2 text-xs font-normal text-slate-400">{new Date(c.createdAt).toLocaleString('uk-UA')}</span>
+          </p>
+          <p className="mt-1 text-slate-600 dark:text-slate-300">{c.text}</p>
+          <div className="mt-2 flex gap-2">
+            {c.status === 'pending' && (
+              <Btn onClick={async () => { await api(`/api/admin/comments/${c.id}/approve`, { method: 'PUT' }); load(); }} variant="accent" className="!px-3 !py-1 text-xs">
+                ✅ {lang === 'uk' ? 'Опублікувати' : 'Approve'}
+              </Btn>
+            )}
+            <Btn onClick={async () => { await api(`/api/admin/comments/${c.id}`, { method: 'DELETE' }); load(); }} variant="danger" className="!px-3 !py-1 text-xs">
+              🗑
+            </Btn>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ---------- Партнери ---------- */
+function PartnersTab() {
+  const { t, lang } = useLang();
+  const [items, setItems] = useState([]);
+  const [form, setForm] = useState({ name: '', url: '', description: '' });
+  const [logo, setLogo] = useState(null);
+  const [show, setShow] = useState(false);
+
+  const load = () => api('/api/partners').then(setItems);
+  useEffect(() => { load(); }, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(form)) fd.append(k, v);
+    if (logo) fd.append('logo', logo);
+    await api('/api/partners', { method: 'POST', body: fd, isForm: true });
+    setForm({ name: '', url: '', description: '' });
+    setShow(false);
+    load();
+  };
+
+  return (
+    <div className="space-y-4">
+      {!show ? (
+        <Btn onClick={() => setShow(true)} variant="accent">+ {t('create')}</Btn>
+      ) : (
+        <Card>
+          <form onSubmit={submit} className="space-y-3">
+            <Field label={lang === 'uk' ? 'Назва' : 'Name'} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Field label="URL" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
+            <Field label={lang === 'uk' ? 'Опис' : 'Description'} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <input type="file" accept="image/*" onChange={(e) => setLogo(e.target.files[0])} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600" />
+            <div className="flex gap-2">
+              <Btn type="submit">{t('save')}</Btn>
+              <Btn onClick={() => setShow(false)} variant="ghost">{t('cancel')}</Btn>
+            </div>
+          </form>
+        </Card>
+      )}
+      {items.length === 0 ? <Empty>—</Empty> : (
+        <ul className="space-y-2">
+          {items.map((p) => (
+            <li key={p.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+              <span className="font-semibold text-slate-900 dark:text-white">{p.name}</span>
+              <Btn onClick={async () => { await api(`/api/partners/${p.id}`, { method: 'DELETE' }); load(); }} variant="danger" className="!px-3 !py-1 text-xs">🗑</Btn>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Вакансії ---------- */
+function JobsTab() {
+  const { t, lang } = useLang();
+  const [items, setItems] = useState([]);
+  const [form, setForm] = useState({ title: '', description: '', requirements: '', contact: '' });
+  const [show, setShow] = useState(false);
+
+  const load = () => api('/api/jobs').then(setItems);
+  useEffect(() => { load(); }, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    await api('/api/jobs', { method: 'POST', body: form });
+    setForm({ title: '', description: '', requirements: '', contact: '' });
+    setShow(false);
+    load();
+  };
+
+  return (
+    <div className="space-y-4">
+      {!show ? (
+        <Btn onClick={() => setShow(true)} variant="accent">+ {t('create')}</Btn>
+      ) : (
+        <Card>
+          <form onSubmit={submit} className="space-y-3">
+            <Field label={lang === 'uk' ? 'Назва вакансії' : 'Job title'} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <TextArea label={lang === 'uk' ? 'Опис' : 'Description'} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <TextArea label={lang === 'uk' ? 'Вимоги' : 'Requirements'} value={form.requirements} onChange={(e) => setForm({ ...form, requirements: e.target.value })} />
+            <Field label={lang === 'uk' ? 'Контакт' : 'Contact'} value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} placeholder="email або телефон" />
+            <div className="flex gap-2">
+              <Btn type="submit">{t('create')}</Btn>
+              <Btn onClick={() => setShow(false)} variant="ghost">{t('cancel')}</Btn>
+            </div>
+          </form>
+        </Card>
+      )}
+      {items.length === 0 ? <Empty>—</Empty> : (
+        <ul className="space-y-2">
+          {items.map((j) => (
+            <li key={j.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+              <span className="font-semibold text-slate-900 dark:text-white">{j.title}</span>
+              <div className="flex gap-2">
+                <Btn onClick={async () => { await api(`/api/jobs/${j.id}`, { method: 'PUT', body: { active: !j.active } }); load(); }} variant="outline" className="!px-3 !py-1 text-xs">
+                  {j.active !== false ? '⏸' : '▶'}
+                </Btn>
+                <Btn onClick={async () => { await api(`/api/jobs/${j.id}`, { method: 'DELETE' }); load(); }} variant="danger" className="!px-3 !py-1 text-xs">🗑</Btn>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Головна сторінка адміна ---------- */
 export default function Admin() {
   const { lang } = useLang();
@@ -758,11 +1108,16 @@ export default function Admin() {
         ['surveys', '📊 Опитування'],
         ['news', '📰 Новини'],
         ['events', '🎪 Події'],
-        ['reviews', '💬 Відгуки'],
+        ['comments', '💬 Коментарі'],
+        ['reviews', '⭐ Відгуки'],
+        ['partners', '🤝 Партнери'],
+        ['jobs', '💼 Вакансії'],
         ['volunteers', '💚 Волонтери'],
         ['messages', '✉️ Повідомлення'],
         ['subscribers', '📬 Підписники'],
+        ['logins', '🔑 Журнал входів'],
         ['audit', '📜 Журнал дій'],
+        ['settings', '⚙️ Налаштування'],
       ]
     : [
         ['stats', '📊 Stats'],
@@ -773,11 +1128,16 @@ export default function Admin() {
         ['surveys', '📊 Surveys'],
         ['news', '📰 News'],
         ['events', '🎪 Events'],
-        ['reviews', '💬 Reviews'],
+        ['comments', '💬 Comments'],
+        ['reviews', '⭐ Reviews'],
+        ['partners', '🤝 Partners'],
+        ['jobs', '💼 Jobs'],
         ['volunteers', '💚 Volunteers'],
         ['messages', '✉️ Messages'],
         ['subscribers', '📬 Subscribers'],
+        ['logins', '🔑 Login log'],
         ['audit', '📜 Audit log'],
+        ['settings', '⚙️ Settings'],
       ];
   const active = 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400';
 
@@ -814,6 +1174,11 @@ export default function Admin() {
         {tab === 'news' && <NewsTab />}
         {tab === 'events' && <EventsTab />}
         {tab === 'reviews' && <ReviewsTab />}
+        {tab === 'comments' && <CommentsTab />}
+        {tab === 'partners' && <PartnersTab />}
+        {tab === 'jobs' && <JobsTab />}
+        {tab === 'logins' && <LoginLogsTab />}
+        {tab === 'settings' && <SettingsTab />}
         {tab === 'volunteers' && <ListTab list="volunteers" />}
         {tab === 'messages' && <ListTab list="messages" />}
         {tab === 'subscribers' && <ListTab list="subscribers" />}

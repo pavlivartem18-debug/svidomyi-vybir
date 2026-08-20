@@ -9,6 +9,8 @@ import { signToken, auth, adminOnly, staffOnly, memberOnly, publicUser } from '.
 import { sendEmail, makeVerifyToken, makeResetToken, hash, compare } from './mailer.js';
 import { seedIfEmpty } from './seed.js';
 import { initDb } from './db.js';
+import { generateSecret, verifyTotp, otpauthUrl } from './totp.js';
+import webpush from 'web-push';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
@@ -88,11 +90,11 @@ const notifyAdmins = (text, link) => {
 };
 
 const notifyMembers = (text, link) => {
-  for (const u of getDb().users) if (u.status === 'member' && !u.blocked) notifyUser(u.id, text, link);
+  for (const u of getDb().users) if (u.status === 'member' && !u.blocked) notifyUserAll(u.id, text, link);
 };
 
 app.post('/api/auth/register', upload.single('avatar'), async (req, res) => {
-  const { name, surname = '', email, password, phone = '', about = '', interests = [] } = req.body || {};
+  const { name, surname = '', email, password, phone = '', about = '', birthday = '', interests = [] } = req.body || {};
   if (!name || !email || !password) return bad(res, "Ім'я, email і пароль — обов'язкові");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad(res, 'Некоректний email');
   if (password.length < 8) return bad(res, 'Пароль має містити щонайменше 8 символів');
@@ -116,6 +118,7 @@ app.post('/api/auth/register', upload.single('avatar'), async (req, res) => {
     verified: true,
     createdAt: new Date().toISOString(),
   };
+  user.birthday = birthday || ''; // день народження (РРРР-ММ-ДД) — для вітань і каталогу
   db.users.push(user);
   save();
 
@@ -135,23 +138,104 @@ app.get('/api/auth/verify/:token', (req, res) => {
   res.json({ message: 'Email підтверджено. Тепер можна увійти.' });
 });
 
+const logLogin = (user, email, ok, req) => {
+  getDb().loginLogs.unshift({
+    id: uid('log-'),
+    userId: user?.id || null,
+    email: email || '',
+    name: user ? user.name : '',
+    ok,
+    ip: req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || '',
+    userAgent: (req.headers['user-agent'] || '').slice(0, 200),
+    at: new Date().toISOString(),
+  });
+  getDb().loginLogs = getDb().loginLogs.slice(0, 500); // журнал входів — останні 500
+  save();
+};
+
 app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body || {};
-  const user = getDb().users.find((u) => u.email.toLowerCase() === (email || '').toLowerCase());
-  if (!user || !compare(password || '', user.password)) return bad(res, 'Невірний email або пароль');
+  const { email, password, totpCode } = req.body || {};
+  const db = getDb();
+  const key = (email || '').toLowerCase();
+  const user = db.users.find((u) => u.email.toLowerCase() === key);
+
+  // захист від підбору: 5 невдалих спроб → 15 хвилин блокування
+  const fails = db.failedLogins[key] || { count: 0, until: 0 };
+  if (Date.now() < fails.until)
+    return bad(res, `Забагато невдалих спроб. Спробуйте через ${Math.ceil((fails.until - Date.now()) / 60000)} хв.`, 429);
+  if (fails.count >= 5) {
+    fails.count = 0;
+    fails.until = 0;
+  }
+
+  if (!user || !compare(password || '', user.password)) {
+    fails.count += 1;
+    if (fails.count >= 5) {
+      fails.until = Date.now() + 15 * 60 * 1000;
+      fails.count = 0;
+    }
+    db.failedLogins[key] = fails;
+    save();
+    logLogin(user, key, false, req);
+    return bad(res, 'Невірний email або пароль');
+  }
   if (user.blocked) return bad(res, 'Ваш акаунт заблоковано адміністратором', 403);
+
+  // 2FA для адміністратора
+  if (user.twoFactorEnabled) {
+    if (!totpCode) return res.status(401).json({ twoFactorRequired: true, error: 'Введіть код з застосунку-автентифікатора' });
+    if (!verifyTotp(user.twoFactorSecret, totpCode)) {
+      logLogin(user, key, false, req);
+      return bad(res, 'Невірний код двофакторної автентифікації', 401);
+    }
+  }
+
+  delete db.failedLogins[key];
+  save();
+  logLogin(user, key, true, req);
   res.json({ token: signToken(user), user: publicUser(user) });
+});
+
+/* --- 2FA (TOTP) --- */
+
+app.post('/api/auth/2fa/start', auth(), (req, res) => {
+  const secret = generateSecret();
+  req.user.twoFactorPending = secret;
+  save();
+  res.json({ secret, otpauthUrl: otpauthUrl(secret) });
+});
+
+app.post('/api/auth/2fa/confirm', auth(), (req, res) => {
+  const { code } = req.body || {};
+  if (!req.user.twoFactorPending) return bad(res, 'Спочатку згенеруйте секрет');
+  if (!verifyTotp(req.user.twoFactorPending, code)) return bad(res, 'Код невірний');
+  req.user.twoFactorEnabled = true;
+  req.user.twoFactorSecret = req.user.twoFactorPending;
+  delete req.user.twoFactorPending;
+  save();
+  audit(req.user.name, 'Увімкнув двофакторну автентифікацію');
+  res.json({ message: 'Двофакторну автентифікацію увімкнено' });
+});
+
+app.post('/api/auth/2fa/disable', auth(), (req, res) => {
+  req.user.twoFactorEnabled = false;
+  delete req.user.twoFactorSecret;
+  delete req.user.twoFactorPending;
+  save();
+  audit(req.user.name, 'Вимкнув двофакторну автентифікацію');
+  res.json({ message: 'Двофакторну автентифікацію вимкнено' });
 });
 
 app.get('/api/auth/me', auth(), (req, res) => res.json(publicUser(req.user)));
 
 app.put('/api/auth/me', auth(), upload.single('avatar'), (req, res) => {
-  const { name, surname, phone, about, interests, currentPassword, newPassword } = req.body || {};
+  const { name, surname, phone, about, birthday, interests, currentPassword, newPassword } = req.body || {};
   const user = req.user;
   if (name) user.name = name;
   if (surname !== undefined) user.surname = surname;
   if (phone !== undefined) user.phone = phone;
   if (about !== undefined) user.about = about;
+  if (birthday !== undefined) user.birthday = birthday;
   if (Array.isArray(interests)) user.interests = interests;
   if (req.file) user.avatar = `/uploads/${req.file.filename}`;
 
@@ -964,6 +1048,525 @@ app.delete('/api/documents/:id', auth(), staffOnly, (req, res) => {
   res.json({ message: 'Видалено' });
 });
 
+/* ---------------- ДОСЯГНЕННЯ, ДОШКА ПОШАНИ, КВЕСТ ---------------- */
+
+const ratingOf = (userId, db) => {
+  const meetings = db.meetings.length;
+  const votes = db.votes.filter((v) => v.status !== 'draft').length;
+  const surveys = db.surveys.filter((s) => s.status === 'open').length;
+  const myMeetings = db.meetings.filter((m) => m.rsvps.some((r) => r.userId === userId && r.answer === 'yes')).length;
+  const myVotes = db.votes.filter((v) => v.ballots.some((b) => b.userId === userId)).length;
+  const mySurveys = db.surveyResponses.filter((s) => s.userId === userId).length;
+  const pct = (mine, total) => (total === 0 ? 100 : Math.round((mine / total) * 100));
+  return Math.round(0.4 * pct(myMeetings, meetings) + 0.4 * pct(myVotes, votes) + 0.2 * pct(mySurveys, surveys));
+};
+
+app.get('/api/me/achievements', auth(), (req, res) => {
+  const db = getDb();
+  const me = req.user.id;
+  const myMeetings = db.meetings.filter((m) => m.rsvps.some((r) => r.userId === me && r.answer === 'yes')).length;
+  const myVotes = db.votes.filter((v) => v.ballots.some((b) => b.userId === me)).length;
+  const mySurveys = db.surveyResponses.filter((s) => s.userId === me).length;
+  const myReviewsGiven = db.reviews.filter((r) => r.fromUserId === me).length;
+  const myEvents = db.registrations.filter((r) => r.userId === me).length;
+  const subscribed = db.subscribers.some((s) => s.email === req.user.email);
+  const profileFilled = !!(req.user.about && req.user.avatar);
+  const isMember = req.user.status === 'member';
+
+  const all = [
+    { code: 'member', icon: '🏅', title: 'Член організації', desc: 'Верифікований адміністратором', done: isMember },
+    { code: 'profile', icon: '🪪', title: 'Ідеальний профіль', desc: 'Фото + опис про себе', done: profileFilled },
+    { code: 'subscribe', icon: '📬', title: 'В курсі подій', desc: 'Підписка на розсилку', done: subscribed },
+    { code: 'first_meeting', icon: '🌱', title: 'Перше засідання', desc: 'Підтвердив участь', done: myMeetings >= 1, progress: [Math.min(myMeetings, 1), 1] },
+    { code: 'first_vote', icon: '🗳️', title: 'Перший голос', desc: 'Проголосував у голосуванні', done: myVotes >= 1, progress: [Math.min(myVotes, 1), 1] },
+    { code: 'events5', icon: '🎪', title: 'Постійний учасник', desc: '5 публічних подій', done: myEvents >= 5, progress: [Math.min(myEvents, 5), 5] },
+    { code: 'votes10', icon: '🔟', title: '10 голосувань', desc: 'Активний виборець', done: myVotes >= 10, progress: [Math.min(myVotes, 10), 10] },
+    { code: 'surveys5', icon: '📊', title: 'Голос народу', desc: '5 опитувань', done: mySurveys >= 5, progress: [Math.min(mySurveys, 5), 5] },
+    { code: 'reviewer', icon: '💬', title: 'Справедливий суддя', desc: 'Залишив відгук колезі', done: myReviewsGiven >= 1 },
+  ];
+  // квест новачка
+  const quest = {
+    done: profileFilled && subscribed && myMeetings >= 1,
+    steps: [
+      { title: 'Заповни профіль (фото + опис)', done: profileFilled },
+      { title: 'Підпишися на розсилку', done: subscribed },
+      { title: 'Зареєструйся на засідання', done: myMeetings >= 1 },
+    ],
+  };
+  res.json({ achievements: all, quest, unlocked: all.filter((a) => a.done).length, total: all.length });
+});
+
+app.get('/api/honor-board', (req, res) => {
+  const db = getDb();
+  const members = db.users
+    .filter((u) => u.status === 'member' && !u.blocked)
+    .map((u) => ({
+      id: u.id,
+      name: u.name,
+      surname: u.surname || '',
+      avatar: u.avatar || '',
+      rating: ratingOf(u.id, db),
+    }))
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 5);
+  res.json(members);
+});
+
+app.get('/api/birthdays', auth(), (req, res) => {
+  const db = getDb();
+  const now = new Date();
+  const soon = [];
+  for (const u of db.users.filter((x) => x.status === 'member' && !x.blocked && x.birthday)) {
+    const b = new Date(u.birthday);
+    let next = new Date(now.getFullYear(), b.getMonth(), b.getDate());
+    if (next < new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+      next = new Date(now.getFullYear() + 1, b.getMonth(), b.getDate());
+    const inDays = Math.round((next - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+    if (inDays <= 14) soon.push({ name: `${u.name} ${u.surname || ''}`.trim(), date: next.toISOString(), inDays, isToday: inDays === 0 });
+  }
+  soon.sort((a, b) => a.inDays - b.inDays);
+  res.json(soon);
+});
+
+/* ---------------- КАТАЛОГ ЧЛЕНІВ ---------------- */
+
+app.get('/api/member-directory', auth(), (req, res) => {
+  const db = getDb();
+  res.json(
+    db.users
+      .filter((u) => u.status === 'member' && !u.blocked)
+      .map((u) => ({
+        id: u.id,
+        name: u.name,
+        surname: u.surname || '',
+        avatar: u.avatar || '',
+        about: u.about || '',
+        interests: u.interests || [],
+        birthday: u.birthday || '',
+        joined: u.createdAt,
+        rating: ratingOf(u.id, db),
+        role: u.role,
+      }))
+      .sort((a, b) => b.rating - a.rating)
+  );
+});
+
+/* ---------------- КОМЕНТАРІ ДО НОВИН ---------------- */
+
+app.get('/api/news/:id/comments', (req, res) => {
+  const list = getDb()
+    .comments.filter((c) => c.newsId === req.params.id && c.status === 'approved')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  res.json(list);
+});
+
+app.post('/api/news/:id/comments', auth(), (req, res) => {
+  const text = (req.body.text || '').trim();
+  if (!text) return bad(res, 'Текст коментаря порожній');
+  if (text.length > 1000) return bad(res, 'Коментар задовгий (максимум 1000 символів)');
+  const moderated = !!getDb().settings.commentModeration;
+  const item = {
+    id: uid('c-'),
+    newsId: req.params.id,
+    userId: req.user.id,
+    userName: `${req.user.name} ${req.user.surname || ''}`.trim(),
+    userAvatar: req.user.avatar || '',
+    text,
+    status: moderated ? 'pending' : 'approved',
+    createdAt: new Date().toISOString(),
+  };
+  getDb().comments.push(item);
+  save();
+  res.status(201).json(item);
+});
+
+app.delete('/api/admin/comments/:id', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  db.comments = db.comments.filter((c) => c.id !== req.params.id);
+  save();
+  res.json({ message: 'Видалено' });
+});
+
+app.put('/api/admin/comments/:id/approve', auth(), adminOnly, (req, res) => {
+  const c = getDb().comments.find((x) => x.id === req.params.id);
+  if (!c) return bad(res, 'Коментар не знайдено', 404);
+  c.status = 'approved';
+  save();
+  res.json(c);
+});
+
+app.get('/api/admin/comments', auth(), adminOnly, (req, res) => {
+  res.json([...getDb().comments].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 200));
+});
+
+/* ---------------- ПАРТНЕРИ ---------------- */
+
+app.get('/api/partners', (req, res) => {
+  res.json(getDb().partners || []);
+});
+
+app.post('/api/partners', auth(), adminOnly, upload.single('logo'), (req, res) => {
+  const { name, url = '', description = '' } = req.body || {};
+  if (!name) return bad(res, 'Назва обовʼязкова');
+  const item = { id: uid('p-'), name, url, description, logo: req.file ? `/uploads/${req.file.filename}` : '' };
+  getDb().partners.push(item);
+  save();
+  res.status(201).json(item);
+});
+
+app.delete('/api/partners/:id', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  db.partners = db.partners.filter((p) => p.id !== req.params.id);
+  save();
+  res.json({ message: 'Видалено' });
+});
+
+/* ---------------- ВАКАНСІЇ ---------------- */
+
+app.get('/api/jobs', (req, res) => {
+  res.json((getDb().jobs || []).filter((j) => j.active !== false));
+});
+
+app.post('/api/jobs', auth(), staffOnly, (req, res) => {
+  const { title, description = '', requirements = '', contact = '' } = req.body || {};
+  if (!title) return bad(res, 'Назва обовʼязкова');
+  const item = { id: uid('j-'), title, description, requirements, contact, active: true, createdAt: new Date().toISOString() };
+  getDb().jobs.push(item);
+  save();
+  res.status(201).json(item);
+});
+
+app.put('/api/jobs/:id', auth(), staffOnly, (req, res) => {
+  const j = getDb().jobs.find((x) => x.id === req.params.id);
+  if (!j) return bad(res, 'Вакансію не знайдено', 404);
+  for (const f of ['title', 'description', 'requirements', 'contact', 'active'])
+    if (req.body[f] !== undefined) j[f] = req.body[f];
+  save();
+  res.json(j);
+});
+
+app.delete('/api/jobs/:id', auth(), staffOnly, (req, res) => {
+  const db = getDb();
+  db.jobs = db.jobs.filter((x) => x.id !== req.params.id);
+  save();
+  res.json({ message: 'Видалено' });
+});
+
+/* ---------------- ФОТОГАЛЕРЕЇ ПОДІЙ ---------------- */
+
+app.post('/api/events/:id/photos', auth(), staffOnly, upload.array('photos', 10), (req, res) => {
+  const ev = getDb().events.find((e) => e.id === req.params.id);
+  if (!ev) return bad(res, 'Подію не знайдено', 404);
+  ev.photos = [...(ev.photos || []), ...req.files.map((f) => `/uploads/${f.filename}`)];
+  save();
+  res.status(201).json(ev.photos);
+});
+
+app.delete('/api/events/:id/photos', auth(), staffOnly, (req, res) => {
+  const ev = getDb().events.find((e) => e.id === req.params.id);
+  if (!ev) return bad(res, 'Подію не знайдено', 404);
+  const { photo } = req.body || {};
+  ev.photos = (ev.photos || []).filter((p) => p !== photo);
+  save();
+  res.json(ev.photos);
+});
+
+/* ---------------- ПРОТОКОЛ ЗАСІДАННЯ (для друку/PDF) ---------------- */
+
+app.get('/api/meetings/:id/protocol', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  const m = db.meetings.find((x) => x.id === req.params.id);
+  if (!m) return bad(res, 'Засідання не знайдено', 404);
+  const present = m.rsvps
+    .filter((r) => r.answer !== 'no')
+    .map((r) => {
+      const u = db.users.find((x) => x.id === r.userId);
+      return u ? `${u.name} ${u.surname || ''}`.trim() : null;
+    })
+    .filter(Boolean);
+  const absent = db.users
+    .filter((u) => u.status === 'member' && !u.blocked && !present.some((p) => p.startsWith(u.name)))
+    .map((u) => `${u.name} ${u.surname || ''}`.trim());
+  const votes = db.votes
+    .filter((v) => v.meetingId === m.id)
+    .map((v) => {
+      const counts = {};
+      for (const b of v.ballots) counts[b.option] = (counts[b.option] || 0) + 1;
+      return {
+        title: v.title,
+        question: v.question,
+        counts,
+        named: v.ballots.map((b) => ({ name: b.userName, option: b.option, at: b.at })),
+        status: v.status,
+      };
+    });
+  res.json({
+    meeting: { title: m.title, startsAt: m.startsAt, location: m.location, format: m.format, agenda: m.agenda },
+    present,
+    absent,
+    votes,
+    generatedAt: new Date().toISOString(),
+  });
+});
+
+/* ---------------- НАЛАШТУВАННЯ (GA, донати, модерація) ---------------- */
+
+app.get('/api/settings', (req, res) => {
+  const s = getDb().settings;
+  res.json({ gaId: s.gaId, commentModeration: s.commentModeration, donationDetails: s.donationDetails, telegramBotName: s.telegramBotName, telegramLinked: !!s.telegramToken });
+});
+
+app.put('/api/admin/settings', auth(), adminOnly, (req, res) => {
+  const s = getDb().settings;
+  for (const f of ['gaId', 'commentModeration', 'donationDetails'])
+    if (req.body[f] !== undefined) s[f] = req.body[f];
+  save();
+  audit(req.user.name, 'Оновив налаштування сайту');
+  res.json(s);
+});
+
+/* ---------------- TELEGRAM-БОТ ---------------- */
+
+let tgPolling = null;
+
+async function tgApi(method, body) {
+  const token = getDb().settings.telegramToken;
+  if (!token) throw new Error('Telegram не підключено');
+  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+app.post('/api/admin/telegram/token', auth(), adminOnly, async (req, res) => {
+  const { token } = req.body || {};
+  if (!token) return bad(res, 'Вкажіть токен бота');
+  const info = await fetch(`https://api.telegram.org/bot${token}/getMe`).then((r) => r.json());
+  if (!info.ok) return bad(res, 'Токен невірний');
+  const s = getDb().settings;
+  s.telegramToken = token;
+  s.telegramBotName = info.result.username;
+  save();
+  startTelegramPolling();
+  audit(req.user.name, 'Підключив Telegram-бота @' + info.result.username);
+  res.json({ botName: info.result.username });
+});
+
+app.get('/me/telegram-link', auth(), (req, res) => {
+  const s = getDb().settings;
+  res.json({ botName: s.telegramBotName, code: req.user.id.slice(-6).toUpperCase() });
+});
+
+async function startTelegramPolling() {
+  const s = getDb().settings;
+  if (!s.telegramToken || tgPolling) return;
+  let offset = 0;
+  tgPolling = setInterval(async () => {
+    try {
+      const updates = await tgApi('getUpdates', { offset, timeout: 0, limit: 10 });
+      if (!updates.ok) return;
+      for (const u of updates.result || []) {
+        offset = u.update_id + 1;
+        const msg = u.message;
+        if (!msg || !msg.text) continue;
+        const code = msg.text.replace('/start', '').trim().toUpperCase();
+        const user = getDb().users.find((x) => x.id.slice(-6).toUpperCase() === code);
+        if (user) {
+          user.telegramChatId = msg.chat.id;
+          save();
+          await tgApi('sendMessage', {
+            chat_id: msg.chat.id,
+            text: `✅ Готово, ${user.name}! Тепер ви отримуватимете сповіщення «Свідомого Вибору» тут.`,
+          });
+        }
+      }
+    } catch { /* мережа — ігноруємо */ }
+  }, 5000);
+}
+
+async function sendTelegram(userId, text) {
+  const user = getDb().users.find((u) => u.id === userId);
+  if (!user?.telegramChatId) return;
+  try {
+    await tgApi('sendMessage', { chat_id: user.telegramChatId, text });
+  } catch { /* ігноруємо помилки доставки */ }
+}
+
+/* ---------------- PUSH-СПОВІЩЕННЯ (веб) ---------------- */
+
+let pushKeys = null;
+
+async function ensurePushKeys() {
+  const s = getDb().settings;
+  if (s.pushPublic && s.pushPrivate) {
+    pushKeys = { publicKey: s.pushPublic, privateKey: s.pushPrivate };
+    return;
+  }
+  const keys = webpush.generateVAPIDKeys();
+  s.pushPublic = keys.publicKey;
+  s.pushPrivate = keys.private;
+  save();
+  pushKeys = keys;
+}
+
+app.get('/api/push/key', async (req, res) => {
+  await ensurePushKeys();
+  res.json({ publicKey: pushKeys.publicKey });
+});
+
+app.post('/api/push/subscribe', auth(), async (req, res) => {
+  await ensurePushKeys();
+  const sub = req.body;
+  const db = getDb();
+  db.pushSubscriptions = db.pushSubscriptions.filter((s) => s.userId !== req.user.id || s.sub.endpoint !== sub.endpoint);
+  db.pushSubscriptions.push({ userId: req.user.id, sub });
+  save();
+  res.json({ message: 'Підписано' });
+});
+
+app.post('/api/push/unsubscribe', auth(), (req, res) => {
+  const db = getDb();
+  db.pushSubscriptions = db.pushSubscriptions.filter((s) => !(s.userId === req.user.id && s.sub.endpoint === req.body.endpoint));
+  save();
+  res.json({ message: 'Відписано' });
+});
+
+async function sendPush(userId, title, body) {
+  if (!pushKeys) await ensurePushKeys();
+  webpush.setVapidDetails('mailto:info@sv-vybir.org.ua', pushKeys.publicKey, pushKeys.privateKey);
+  const subs = getDb().pushSubscriptions.filter((s) => s.userId === userId);
+  for (const s of subs) {
+    try {
+      await webpush.sendNotification(s.sub, JSON.stringify({ title, body }));
+    } catch (e) {
+      if (e.statusCode === 404 || e.statusCode === 410) {
+        // підписка застаріла
+        const db = getDb();
+        db.pushSubscriptions = db.pushSubscriptions.filter((x) => x !== s);
+        save();
+      }
+    }
+  }
+}
+
+/* сповіщення тепер йдуть одразу в три канали: сайт + Telegram + push */
+const notifyUserAll = (userId, text, link) => {
+  notifyUser(userId, text, link);
+  sendTelegram(userId, text);
+  sendPush(userId, 'Свідомий Вибір', text);
+};
+
+/* ---------------- БЕКАПИ ---------------- */
+
+function makeBackup() {
+  const db = getDb();
+  const snapshot = {};
+  for (const k of Object.keys(db)) if (!['failedLogins', 'backups'].includes(k)) snapshot[k] = db[k];
+  const day = new Date().toISOString().slice(0, 10);
+  db.backups = (db.backups || []).filter((b) => b.day !== day);
+  db.backups.push({ id: uid('bk-'), day, data: snapshot });
+  db.backups = db.backups.slice(-7); // тримаємо останні 7 днів
+  save();
+}
+
+// щогодинна перевірка: настав новий день → бекап
+setInterval(() => {
+  const db = getDb();
+  const day = new Date().toISOString().slice(0, 10);
+  if (!db.backups.some((b) => b.day === day)) makeBackup();
+}, 60 * 60 * 1000);
+setTimeout(() => makeBackup(), 30 * 1000); // перший бекап при старті
+
+app.get('/api/admin/backups', auth(), adminOnly, (req, res) => {
+  res.json((getDb().backups || []).map((b) => ({ id: b.id, day: b.day, size: JSON.stringify(b.data).length })).reverse());
+});
+
+app.get('/api/admin/backups/:id/download', auth(), adminOnly, (req, res) => {
+  const b = getDb().backups.find((x) => x.id === req.params.id);
+  if (!b) return bad(res, 'Бекап не знайдено', 404);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename=backup-${b.day}.json`);
+  res.send(JSON.stringify(b.data, null, 2));
+});
+
+app.post('/api/admin/backup-now', auth(), adminOnly, (req, res) => {
+  makeBackup();
+  audit(req.user.name, 'Створив резервну копію');
+  res.json({ message: 'Бекап створено' });
+});
+
+/* ---------------- ІМПОРТ УЧАСНИКІВ З CSV ---------------- */
+
+app.post('/api/admin/import-users', auth(), adminOnly, (req, res) => {
+  const { csv } = req.body || {};
+  if (!csv) return bad(res, 'Відсутні дані CSV');
+  const db = getDb();
+  const created = [];
+  const skipped = [];
+  const lines = csv.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const [name, surname, email, phone, birthday] = line.split(/[,;]/).map((s) => (s || '').trim());
+    if (!name || !email) { skipped.push(line); continue; }
+    if (db.users.some((u) => u.email.toLowerCase() === email.toLowerCase())) { skipped.push(email); continue; }
+    const password = 'SV' + Math.random().toString(36).slice(2, 10);
+    const user = {
+      id: uid('u-'),
+      name, surname: surname || '', email: email.toLowerCase(),
+      password: hash(password), phone: phone || '', about: '', birthday: birthday || '',
+      interests: [], role: 'member', status: 'member', blocked: false, avatar: '',
+      verified: true, createdAt: new Date().toISOString(),
+    };
+    db.users.push(user);
+    created.push({ email, password });
+  }
+  save();
+  audit(req.user.name, `Імпортував ${created.length} учасників з CSV`);
+  res.json({ created, skipped, createdCount: created.length });
+});
+
+/* ---------------- ЖУРНАЛ ВХОДІВ ---------------- */
+
+app.get('/api/admin/login-logs', auth(), adminOnly, (req, res) => {
+  res.json(getDb().loginLogs.slice(0, 100));
+});
+
+/* ---------------- ТИЖНЕВИЙ ДАЙДЖЕСТ ---------------- */
+
+app.post('/api/admin/digest', auth(), adminOnly, async (req, res) => {
+  const db = getDb();
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const news = db.news.filter((n) => n.createdAt >= weekAgo).map((n) => `📰 ${n.title}`);
+  const meetings = db.meetings.filter((m) => m.createdAt >= weekAgo).map((m) => `🗓️ ${m.title}`);
+  const events = db.events.filter((e) => e.startsAt >= new Date().toISOString()).slice(0, 3).map((e) => `🎪 ${e.title}`);
+  const lines = ['📅 Тижневий дайджест «Свідомого Вибору»', '', ...news, ...meetings, ...events].filter(Boolean).join('\n');
+  for (const u of db.users.filter((x) => x.status === 'member' && !x.blocked)) notifyUserAll(u.id, lines, '/dashboard');
+  audit(req.user.name, 'Надіслав тижневий дайджест');
+  res.json({ message: `Дайджест надіслано (${lines.split('\n').length - 1} позицій)` });
+});
+
+/* ---------------- SEO: SITEMAP + ROBOTS ---------------- */
+
+app.get('/sitemap.xml', (req, res) => {
+  const base = `https://${req.headers.host || 'svidomyi-vybir.onrender.com'}`;
+  const pages = ['', '/about', '/events', '/news', '/downloads', '/volunteer', '/contact', '/jobs', '/partners', '/donate'];
+  const db = getDb();
+  const newsUrls = db.news.map((n) => `/news/${n.id}`);
+  const eventUrls = db.events.map((e) => `/events/${e.id}`);
+  const body = [...pages, ...newsUrls, ...eventUrls]
+    .map((p) => `<url><loc>${base}${p}</loc></url>`)
+    .join('');
+  res.setHeader('Content-Type', 'application/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</urlset>`);
+});
+
+app.get('/robots.txt', (req, res) => {
+  const base = `https://${req.headers.host || 'svidomyi-vybir.onrender.com'}`;
+  res.type('text/plain');
+  res.send(`User-agent: *\nAllow: /\nSitemap: ${base}/sitemap.xml\n`);
+});
+
 /* ---------------- СТАТИКА (зібраний фронтенд) ---------------- */
 
 const DIST = path.join(__dirname, '..', '..', 'client', 'dist');
@@ -993,6 +1596,7 @@ const PORT = process.env.PORT || 4000;
 initDb()
   .then(() => {
     seedIfEmpty();
+    startTelegramPolling(); // якщо токен бота збережений
     app.listen(PORT, () => console.log(`API сервер запущено: http://localhost:${PORT}`));
   })
   .catch((e) => {

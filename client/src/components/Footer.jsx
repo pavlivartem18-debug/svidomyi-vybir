@@ -24,6 +24,10 @@ export default function Footer() {
             <li><Link className="hover:text-blue-600" to="/events">{t('nav.events')}</Link></li>
             <li><Link className="hover:text-blue-600" to="/news">{t('nav.news')}</Link></li>
             <li><Link className="hover:text-blue-600" to="/volunteer">{t('nav.volunteer')}</Link></li>
+            <li><Link className="hover:text-blue-600" to="/jobs">{lang === 'uk' ? 'Вакансії' : 'Jobs'}</Link></li>
+            <li><Link className="hover:text-blue-600" to="/partners">{lang === 'uk' ? 'Партнери' : 'Partners'}</Link></li>
+            <li><Link className="hover:text-blue-600" to="/donate">{lang === 'uk' ? '💚 Підтримати' : '💚 Donate'}</Link></li>
+            <li><Link className="hover:text-blue-600" to="/privacy">{lang === 'uk' ? 'Політика конфіденційності' : 'Privacy policy'}</Link></li>
           </ul>
         </div>
         <div>

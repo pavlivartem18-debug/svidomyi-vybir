@@ -5,3 +5,9 @@
 body {
   @apply bg-white text-slate-800 antialiased dark:bg-slate-900 dark:text-slate-100;
 }
+
+/* Друк протоколів: лише документ, без меню сайту */
+@media print {
+  header, footer, nav { display: none !important; }
+  body { background: white !important; }
+}

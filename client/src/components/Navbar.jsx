@@ -93,6 +93,7 @@ export default function Navbar() {
   const memberLinks = [
     ['/meetings', t('nav.meetings')],
     ['/surveys', t('nav.surveys')],
+    ['/members', lang === 'uk' ? 'Каталог' : 'Directory'],
   ];
 
   const item = ({ isActive }) =>

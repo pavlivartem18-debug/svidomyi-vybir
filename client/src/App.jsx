@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Providers, useAuth } from './context.jsx';
 import Navbar from './components/Navbar.jsx';
@@ -14,9 +15,16 @@ import Dashboard from './pages/Dashboard.jsx';
 import Admin from './pages/Admin.jsx';
 import Meetings from './pages/Meetings.jsx';
 import MeetingDetail from './pages/MeetingDetail.jsx';
+import MeetingProtocol from './pages/MeetingProtocol.jsx';
 import VoteDetail from './pages/VoteDetail.jsx';
 import Surveys from './pages/Surveys.jsx';
 import Downloads from './pages/Downloads.jsx';
+import Members from './pages/Members.jsx';
+import Partners from './pages/Partners.jsx';
+import Jobs from './pages/Jobs.jsx';
+import Donate from './pages/Donate.jsx';
+import Privacy from './pages/Privacy.jsx';
+import { initGa } from './seo.js';
 import { Login, Register, Forgot, Reset, VerifyEmail } from './pages/Auth.jsx';
 
 function Protected({ children, adminOnly = false }) {
@@ -50,7 +58,13 @@ function Shell() {
           <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
           <Route path="/meetings" element={<Protected><Meetings /></Protected>} />
           <Route path="/meetings/:id" element={<Protected><MeetingDetail /></Protected>} />
+          <Route path="/meetings/:id/protocol" element={<Protected adminOnly><MeetingProtocol /></Protected>} />
           <Route path="/votes/:id" element={<Protected><VoteDetail /></Protected>} />
+          <Route path="/members" element={<Protected><Members /></Protected>} />
+          <Route path="/partners" element={<Partners />} />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/donate" element={<Donate />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/surveys" element={<Protected><Surveys /></Protected>} />
           <Route path="/admin" element={<Protected adminOnly><Admin /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -62,6 +76,7 @@ function Shell() {
 }
 
 export default function App() {
+  useEffect(() => { initGa(); }, []);
   return (
     <Providers>
       <BrowserRouter>

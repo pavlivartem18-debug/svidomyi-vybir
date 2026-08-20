@@ -4,6 +4,67 @@ import { api, imgUrl } from '../api.js';
 import { useAuth, useLang } from '../context.jsx';
 import { Btn, Badge, Alert, fmtDateTime } from '../components/ui.jsx';
 import { eventCats } from '../i18n.js';
+import { downloadIcs } from '../seo.js';
+
+function Gallery({ eventId, photos, isStaff, onChange }) {
+  const [lightbox, setLightbox] = useState(null);
+  const { lang } = useLang();
+
+  const upload = async (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const fd = new FormData();
+    for (const f of files) fd.append('photos', f);
+    await api(`/api/events/${eventId}/photos`, { method: 'POST', body: fd, isForm: true });
+    onChange();
+  };
+
+  const removePhoto = async (photo) => {
+    await api(`/api/events/${eventId}/photos`, { method: 'DELETE', body: { photo } });
+    onChange();
+  };
+
+  if (!photos?.length && !isStaff) return null;
+
+  return (
+    <div className="mt-6">
+      <h3 className="font-bold text-slate-900 dark:text-white">📷 {lang === 'uk' ? 'Фото події' : 'Event photos'}</h3>
+      {isStaff && (
+        <label className="mt-2 inline-block cursor-pointer rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-400 dark:border-slate-600 dark:text-slate-300">
+          + {lang === 'uk' ? 'додати фото (до 10)' : 'add photos (up to 10)'}
+          <input type="file" accept="image/*" multiple className="hidden" onChange={upload} />
+        </label>
+      )}
+      {photos?.length > 0 && (
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {photos.map((p, i) => (
+            <div key={p} className="group relative">
+              <img
+                src={imgUrl(p)}
+                alt=""
+                className="aspect-square w-full cursor-pointer rounded-lg object-cover"
+                onClick={() => setLightbox(imgUrl(p))}
+              />
+              {isStaff && (
+                <button
+                  onClick={() => removePhoto(p)}
+                  className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {lightbox && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="" className="max-h-[90vh] max-w-full rounded-lg" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -82,7 +143,20 @@ export default function EventDetail() {
         ) : (
           <Btn onClick={register} variant="accent">{t('registerEvent')}</Btn>
         )}
+        <Btn
+          onClick={() => downloadIcs({ title: event.title, description: event.description, startsAt: event.startsAt, location: event.location })}
+          variant="outline"
+        >
+          📅 {lang === 'uk' ? 'Додати в календар' : 'Add to calendar'}
+        </Btn>
       </div>
+
+      <Gallery
+        eventId={event.id}
+        photos={event.photos}
+        isStaff={['admin', 'deputy'].includes(user?.role)}
+        onChange={load}
+      />
     </div>
   );
 }

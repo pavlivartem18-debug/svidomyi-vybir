@@ -59,7 +59,7 @@ export function Register() {
   const { t, lang } = useLang();
   const { login } = useAuth();
   const nav = useNavigate();
-  const [form, setForm] = useState({ name: '', surname: '', email: '', password: '', phone: '', about: '' });
+  const [form, setForm] = useState({ name: '', surname: '', email: '', password: '', phone: '', about: '', birthday: '' });
   const [interests, setInterests] = useState([]);
   const [avatar, setAvatar] = useState(null);
   const [err, setErr] = useState(null);
@@ -98,6 +98,12 @@ export function Register() {
         <Field label={t('email')} type="email" required value={form.email} onChange={set('email')} />
         <Field label={t('password')} type="password" required minLength={8} value={form.password} onChange={set('password')} />
         <Field label={t('phone')} value={form.phone} onChange={set('phone')} />
+        <Field
+          label={lang === 'uk' ? 'Дата народження (для вітань 🎂)' : 'Birthday (for greetings 🎂)'}
+          type="date"
+          value={form.birthday || ''}
+          onChange={set('birthday')}
+        />
         <TextArea label={lang === 'uk' ? 'Коротко про себе' : 'About you'} rows={3} value={form.about} onChange={set('about')} />
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-slate-700 dark:text-slate-200">

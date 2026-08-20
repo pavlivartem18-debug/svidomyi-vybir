@@ -26,8 +26,22 @@ const emptyDb = {
   reviews: [],
   notifications: [],
   auditLogs: [],
+  comments: [],
+  partners: [],
+  jobs: [],
+  loginLogs: [],
+  pushSubscriptions: [],
+  backups: [],
+  settings: {
+    gaId: '',
+    telegramToken: '',
+    telegramBotName: '',
+    commentModeration: false,
+    donationDetails: '',
+  },
   resetTokens: {},
   verifyTokens: {},
+  failedLogins: {},
 };
 
 let db = { ...emptyDb };

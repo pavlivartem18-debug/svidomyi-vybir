@@ -41,4 +41,4 @@ export const memberOnly = (req, res, next) => {
   next();
 };
 
-export const publicUser = ({ password, verifyToken, ...rest }) => rest;
+export const publicUser = ({ password, verifyToken, twoFactorSecret, twoFactorPending, ...rest }) => rest;

@@ -18,6 +18,25 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/* Push-сповіщення: показуємо системне повідомлення телефону/компʼютера */
+self.addEventListener('push', (event) => {
+  let data = { title: 'Свідомий Вибір', body: '' };
+  try { data = { ...data, ...event.data.json() }; } catch {}
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [100, 50, 100],
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow('/'));
+});
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.pathname.startsWith('/api') || url.pathname.startsWith('/uploads')) return;
