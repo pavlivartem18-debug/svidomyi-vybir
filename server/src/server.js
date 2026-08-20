@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { getDb, save, uid } from './db.js';
-import { signToken, auth, adminOnly, publicUser } from './auth.js';
+import { signToken, auth, adminOnly, staffOnly, memberOnly, publicUser } from './auth.js';
 import { sendEmail, makeVerifyToken, makeResetToken, hash, compare } from './mailer.js';
 import { seedIfEmpty } from './seed.js';
 import { initDb } from './db.js';
@@ -38,8 +38,38 @@ const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 
 /* ---------------- AUTH ---------------- */
 
-app.post('/api/auth/register', async (req, res) => {
-  const { name, email, password, phone, interests = [] } = req.body || {};
+// Журнал адміністративних дій
+function audit(actorName, action) {
+  getDb().auditLogs.push({
+    id: uid('log-'),
+    actorName,
+    action,
+    createdAt: new Date().toISOString(),
+  });
+  save();
+}
+
+function notifyUser(userId, text, link) {
+  getDb().notifications.push({
+    id: uid('nt-'),
+    userId,
+    text,
+    link: link || '/dashboard',
+    read: false,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+const notifyAdmins = (text, link) => {
+  for (const u of getDb().users) if (u.role === 'admin') notifyUser(u.id, text, link);
+};
+
+const notifyMembers = (text, link) => {
+  for (const u of getDb().users) if (u.status === 'member' && !u.blocked) notifyUser(u.id, text, link);
+};
+
+app.post('/api/auth/register', upload.single('avatar'), async (req, res) => {
+  const { name, surname = '', email, password, phone = '', about = '', interests = [] } = req.body || {};
   if (!name || !email || !password) return bad(res, "Ім'я, email і пароль — обов'язкові");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad(res, 'Некоректний email');
   if (password.length < 8) return bad(res, 'Пароль має містити щонайменше 8 символів');
@@ -50,18 +80,23 @@ app.post('/api/auth/register', async (req, res) => {
   const user = {
     id: uid('u-'),
     name,
+    surname,
     email: email.toLowerCase(),
     password: await hash(password),
-    phone: phone || '',
-    interests,
+    phone,
+    about,
+    interests: Array.isArray(interests) ? interests : String(interests).split(',').filter(Boolean),
     role: 'member',
-    // прототип: реальні листи не надсилаються, тому акаунт активний одразу
+    status: 'pending', // очікує верифікації адміністратором
+    blocked: false,
+    avatar: req.file ? `/uploads/${req.file.filename}` : '',
     verified: true,
     createdAt: new Date().toISOString(),
   };
   db.users.push(user);
   save();
 
+  notifyAdmins(`Нова реєстрація: ${name} ${surname} (${email}) — очікує верифікації`, '/admin');
   sendEmail(user.email, 'Вітаемо в «Свідомому Виборі»!', 'Ваш обліковий запис створено.');
   res.status(201).json({ message: 'Обліковий запис створено.' });
 });
@@ -81,18 +116,21 @@ app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body || {};
   const user = getDb().users.find((u) => u.email.toLowerCase() === (email || '').toLowerCase());
   if (!user || !compare(password || '', user.password)) return bad(res, 'Невірний email або пароль');
-  if (!user.verified) return bad(res, 'Спочатку підтвердіть email — перевірте пошту', 403);
+  if (user.blocked) return bad(res, 'Ваш акаунт заблоковано адміністратором', 403);
   res.json({ token: signToken(user), user: publicUser(user) });
 });
 
 app.get('/api/auth/me', auth(), (req, res) => res.json(publicUser(req.user)));
 
-app.put('/api/auth/me', auth(), (req, res) => {
-  const { name, phone, interests, currentPassword, newPassword } = req.body || {};
+app.put('/api/auth/me', auth(), upload.single('avatar'), (req, res) => {
+  const { name, surname, phone, about, interests, currentPassword, newPassword } = req.body || {};
   const user = req.user;
   if (name) user.name = name;
+  if (surname !== undefined) user.surname = surname;
   if (phone !== undefined) user.phone = phone;
+  if (about !== undefined) user.about = about;
   if (Array.isArray(interests)) user.interests = interests;
+  if (req.file) user.avatar = `/uploads/${req.file.filename}`;
 
   if (newPassword) {
     if (!currentPassword || !compare(currentPassword, user.password))
@@ -319,8 +357,26 @@ app.post('/api/newsletter/subscribe', (req, res) => {
 app.get('/api/admin/stats', auth(), adminOnly, (req, res) => {
   const db = getDb();
   const now = new Date().toISOString();
+  const members = db.users.filter((u) => u.status === 'member' && !u.blocked);
+  const avg = (arr) => (arr.length ? Math.round(arr.reduce((s, x) => s + x, 0) / arr.length) : 0);
+  // реєстрації за останні 6 місяців — для графіка
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push({
+      key,
+      label: d.toLocaleDateString('uk-UA', { month: 'short' }),
+      users: db.users.filter((u) => u.createdAt.startsWith(key)).length,
+      votesCast: db.votes.flatMap((v) => v.ballots).filter((b) => b.at.startsWith(key)).length,
+    });
+  }
   res.json({
     users: db.users.length,
+    pending: db.users.filter((u) => u.status === 'pending').length,
+    verifiedMembers: members.length,
+    blocked: db.users.filter((u) => u.blocked).length,
     news: db.news.length,
     events: db.events.length,
     upcomingEvents: db.events.filter((e) => e.startsAt >= now).length,
@@ -328,6 +384,12 @@ app.get('/api/admin/stats', auth(), adminOnly, (req, res) => {
     volunteers: db.volunteers.length,
     messages: db.messages.length,
     subscribers: db.subscribers.length,
+    meetings: db.meetings.length,
+    votes: db.votes.length,
+    openVotes: db.votes.filter((v) => v.status === 'open').length,
+    surveys: db.surveys.length,
+    reviews: db.reviews.length,
+    months,
   });
 });
 
@@ -363,6 +425,469 @@ app.delete('/api/newsletter/:id', auth(), adminOnly, (req, res) => {
   db.subscribers = db.subscribers.filter((s) => s.id !== req.params.id);
   save();
   res.json({ message: 'Видалено' });
+});
+
+/* ---------------- РЕЙТИНГ АКТИВНОСТІ ---------------- */
+// Формула: 40% участь у засіданнях + 40% участь у голосуваннях + 20% опитування.
+// Рейтинг рахується на сервері — користувач не може його змінити.
+app.get('/api/me/rating', auth(), (req, res) => {
+  const db = getDb();
+  const membersCount = db.users.filter((u) => u.status === 'member' && !u.blocked).length || 1;
+  const meetings = db.meetings.length;
+  const votes = db.votes.filter((v) => v.status === 'closed' || v.status === 'open').length;
+  const surveys = db.surveys.filter((s) => s.status === 'open').length;
+
+  const myMeetings = db.meetings.filter((m) =>
+    m.rsvps.some((r) => r.userId === req.user.id && r.answer === 'yes')
+  ).length;
+  const myVotes = db.votes.filter((v) =>
+    v.ballots.some((b) => b.userId === req.user.id)
+  ).length;
+  const mySurveys = db.surveyResponses.filter((s) => s.userId === req.user.id).length;
+
+  const pct = (mine, total) => (total === 0 ? 100 : Math.round((mine / total) * 100));
+  const rating = Math.round(
+    0.4 * pct(myMeetings, meetings) + 0.4 * pct(myVotes, votes) + 0.2 * pct(mySurveys, surveys)
+  );
+
+  const myReviews = db.reviews.filter((r) => r.aboutUserId === req.user.id);
+  const avgReview = myReviews.length
+    ? (myReviews.reduce((s, r) => s + r.rating, 0) / myReviews.length).toFixed(1)
+    : null;
+
+  res.json({
+    rating,
+    details: {
+      meetings: { mine: myMeetings, total: meetings, pct: pct(myMeetings, meetings) },
+      votes: { mine: myVotes, total: votes, pct: pct(myVotes, votes) },
+      surveys: { mine: mySurveys, total: surveys, pct: pct(mySurveys, surveys) },
+      reviewsCount: myReviews.length,
+      avgReview,
+      membersCount,
+    },
+  });
+});
+
+/* ---------------- СПОВІЩЕННЯ ---------------- */
+
+app.get('/api/notifications', auth(), (req, res) => {
+  const list = getDb()
+    .notifications.filter((n) => n.userId === req.user.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 30);
+  res.json(list);
+});
+
+app.post('/api/notifications/read-all', auth(), (req, res) => {
+  for (const n of getDb().notifications) if (n.userId === req.user.id) n.read = true;
+  save();
+  res.json({ message: 'Прочитано' });
+});
+
+/* ---------------- ЗАСІДАННЯ ---------------- */
+
+const meetingCounts = (m, db) => ({
+  yes: m.rsvps.filter((r) => r.answer === 'yes').length,
+  no: m.rsvps.filter((r) => r.answer === 'no').length,
+  maybe: m.rsvps.filter((r) => r.answer === 'maybe').length,
+});
+
+app.get('/api/meetings', auth(), (req, res) => {
+  const db = getDb();
+  const list = [...db.meetings]
+    .sort((a, b) => b.startsAt.localeCompare(a.startsAt))
+    .map((m) => ({
+      ...m,
+      counts: meetingCounts(m, db),
+      myRsvp: m.rsvps.find((r) => r.userId === req.user.id)?.answer || null,
+      votesCount: db.votes.filter((v) => v.meetingId === m.id).length,
+    }));
+  res.json(list);
+});
+
+app.get('/api/meetings/:id', auth(), (req, res) => {
+  const db = getDb();
+  const m = db.meetings.find((x) => x.id === req.params.id);
+  if (!m) return bad(res, 'Засідання не знайдено', 404);
+  const votes = db.votes
+    .filter((v) => v.meetingId === m.id)
+    .map((v) => ({
+      id: v.id,
+      title: v.title,
+      status: v.status,
+      myVote: v.ballots.find((b) => b.userId === req.user.id)?.option || null,
+      results: voteResults(v, db, req.user),
+    }));
+  const participants = m.rsvps.map((r) => ({
+    answer: r.answer,
+    at: r.at,
+    user: db.users.find((u) => u.id === r.userId)
+      ? { id: r.userId, name: db.users.find((u) => u.id === r.userId).name, surname: db.users.find((u) => u.id === r.userId).surname || '' }
+      : null,
+  })).filter((p) => p.user);
+  res.json({ ...m, counts: meetingCounts(m, db), myRsvp: m.rsvps.find((r) => r.userId === req.user.id)?.answer || null, votes, participants });
+});
+
+app.post('/api/meetings', auth(), adminOnly, (req, res) => {
+  const { title, startsAt, location = '', format = 'очно', description = '', agenda = [] } = req.body || {};
+  if (!title || !startsAt) return bad(res, 'Назва і дата засідання обовʼязкові');
+  const m = {
+    id: uid('m-'),
+    title,
+    startsAt,
+    location,
+    format,
+    description,
+    agenda: agenda.map((a, i) => ({ id: uid('a-'), number: i + 1, ...a, status: a.status || 'очікує' })),
+    rsvps: [],
+    createdAt: new Date().toISOString(),
+  };
+  getDb().meetings.push(m);
+  save();
+  audit(req.user.name, `Створив засідання «${title}»`);
+  notifyMembers(`Створено нове засідання: «${title}»`, '/meetings');
+  res.status(201).json(m);
+});
+
+app.put('/api/meetings/:id', auth(), adminOnly, (req, res) => {
+  const m = getDb().meetings.find((x) => x.id === req.params.id);
+  if (!m) return bad(res, 'Засідання не знайдено', 404);
+  const { title, startsAt, location, format, description, agenda } = req.body || {};
+  if (title) m.title = title;
+  if (startsAt) m.startsAt = startsAt;
+  if (location !== undefined) m.location = location;
+  if (format) m.format = format;
+  if (description !== undefined) m.description = description;
+  if (Array.isArray(agenda))
+    m.agenda = agenda.map((a, i) => {
+      const old = m.agenda.find((x) => x.id === a.id);
+      return { id: old?.id || uid('a-'), number: i + 1, ...a, status: a.status || old?.status || 'очікує' };
+    });
+  save();
+  audit(req.user.name, `Відредагував засідання «${m.title}»`);
+  res.json(m);
+});
+
+app.delete('/api/meetings/:id', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  const m = db.meetings.find((x) => x.id === req.params.id);
+  db.meetings = db.meetings.filter((x) => x.id !== req.params.id);
+  db.votes = db.votes.filter((v) => v.meetingId !== req.params.id);
+  save();
+  if (m) audit(req.user.name, `Видалив засідання «${m.title}»`);
+  res.json({ message: 'Видалено' });
+});
+
+app.post('/api/meetings/:id/rsvp', auth(), memberOnly, (req, res) => {
+  const m = getDb().meetings.find((x) => x.id === req.params.id);
+  if (!m) return bad(res, 'Засідання не знайдено', 404);
+  const { answer } = req.body || {};
+  if (!['yes', 'no', 'maybe'].includes(answer)) return bad(res, 'Невірна відповідь');
+  m.rsvps = m.rsvps.filter((r) => r.userId !== req.user.id);
+  m.rsvps.push({ userId: req.user.id, answer, at: new Date().toISOString() });
+  save();
+  res.json({ message: 'Збережено' });
+});
+
+/* ---------------- ПОІМЕННІ ГОЛОСУВАННЯ ---------------- */
+
+const voteResults = (v, db, requester) => {
+  const counts = {};
+  for (const opt of v.options) counts[opt] = 0;
+  for (const b of v.ballots) counts[b.option] = (counts[b.option] || 0) + 1;
+  const membersCount = db.users.filter((u) => u.status === 'member' && !u.blocked).length;
+  const named = v.ballots.map((b) => ({ name: b.userName, option: b.option, at: b.at }));
+  const isOpen = v.status === 'open';
+  // поіменна таблиця відкрита адміну завжди, членам — лише після завершення голосування
+  const canSeeNamed = requester && (requester.role === 'admin' || requester.role === 'deputy' || !isOpen);
+  return {
+    counts,
+    membersCount,
+    notVoted: Math.max(0, membersCount - v.ballots.length),
+    named: canSeeNamed ? named : null,
+  };
+};
+
+app.get('/api/votes', auth(), (req, res) => {
+  const db = getDb();
+  const list = [...db.votes]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((v) => ({
+      id: v.id,
+      title: v.title,
+      question: v.question,
+      meetingId: v.meetingId,
+      meetingTitle: db.meetings.find((m) => m.id === v.meetingId)?.title || '',
+      status: v.status,
+      createdAt: v.createdAt,
+      myVote: v.ballots.find((b) => b.userId === req.user.id)?.option || null,
+      ballotsCount: v.ballots.length,
+      results: voteResults(v, db, req.user),
+    }));
+  res.json(list);
+});
+
+app.get('/api/votes/:id', auth(), (req, res) => {
+  const db = getDb();
+  const v = db.votes.find((x) => x.id === req.params.id);
+  if (!v) return bad(res, 'Голосування не знайдено', 404);
+  res.json({
+    id: v.id,
+    title: v.title,
+    question: v.question,
+    meetingId: v.meetingId,
+    meetingTitle: db.meetings.find((m) => m.id === v.meetingId)?.title || '',
+    status: v.status,
+    createdAt: v.createdAt,
+    myVote: v.ballots.find((b) => b.userId === req.user.id)?.option || null,
+    results: voteResults(v, db, req.user),
+  });
+});
+
+app.post('/api/votes', auth(), adminOnly, (req, res) => {
+  const { title, question, meetingId = '', agendaNumber = 0, options } = req.body || {};
+  if (!title || !question) return bad(res, 'Назва і питання обовʼязкові');
+  const v = {
+    id: uid('v-'),
+    title,
+    question,
+    meetingId,
+    agendaNumber: Number(agendaNumber) || 0,
+    options: Array.isArray(options) && options.length ? options : ['ЗА', 'ПРОТИ', 'УТРИМАВСЯ'],
+    status: 'draft',
+    ballots: [],
+    createdAt: new Date().toISOString(),
+  };
+  getDb().votes.push(v);
+  save();
+  audit(req.user.name, `Створив голосування «${title}»`);
+  res.status(201).json(v);
+});
+
+app.put('/api/votes/:id/status', auth(), adminOnly, (req, res) => {
+  const v = getDb().votes.find((x) => x.id === req.params.id);
+  if (!v) return bad(res, 'Голосування не знайдено', 404);
+  const { status } = req.body || {};
+  if (!['draft', 'open', 'closed'].includes(status)) return bad(res, 'Невірний статус');
+  v.status = status;
+  if (status === 'closed') v.closedAt = new Date().toISOString();
+  save();
+  audit(req.user.name, `${status === 'open' ? 'Розпочав' : status === 'closed' ? 'Завершив' : 'Скасував'} голосування «${v.title}»`);
+  if (status === 'open') notifyMembers(`Розпочалося голосування: «${v.title}»`, `/meetings/${v.meetingId}`);
+  if (status === 'closed') notifyMembers(`Завершено голосування: «${v.title}»`, '/dashboard');
+  res.json(v);
+});
+
+app.delete('/api/votes/:id', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  const v = db.votes.find((x) => x.id === req.params.id);
+  db.votes = db.votes.filter((x) => x.id !== req.params.id);
+  save();
+  if (v) audit(req.user.name, `Видалив голосування «${v.title}»`);
+  res.json({ message: 'Видалено' });
+});
+
+// Голосування: один голос на користувача, змінити не можна
+app.post('/api/votes/:id/cast', auth(), memberOnly, (req, res) => {
+  const db = getDb();
+  const v = db.votes.find((x) => x.id === req.params.id);
+  if (!v) return bad(res, 'Голосування не знайдено', 404);
+  if (v.status !== 'open') return bad(res, 'Голосування не є активним', 403);
+  if (v.ballots.some((b) => b.userId === req.user.id))
+    return bad(res, 'Ви вже проголосували. Змінити голос не можна.', 403);
+  const { option } = req.body || {};
+  if (!v.options.includes(option)) return bad(res, 'Невірний варіант голосування');
+  v.ballots.push({
+    userId: req.user.id,
+    userName: `${req.user.name} ${req.user.surname || ''}`.trim(),
+    option,
+    at: new Date().toISOString(),
+  });
+  save();
+  audit(req.user.name, `Проголосував «${option}» у голосуванні «${v.title}»`);
+  res.json({ message: 'Ваш голос прийнято' });
+});
+
+/* ---------------- ОПИТУВАННЯ ---------------- */
+
+const surveyResults = (s, db) => {
+  const total = db.surveyResponses.filter((r) => r.surveyId === s.id).length;
+  const counts = s.options.map(
+    (_, i) => db.surveyResponses.filter((r) => r.surveyId === s.id && r.optionIndex === i).length
+  );
+  return { total, counts };
+};
+
+app.get('/api/surveys', auth(), (req, res) => {
+  const db = getDb();
+  const list = [...db.surveys]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((s) => ({
+      ...s,
+      myResponse: db.surveyResponses.find((r) => r.surveyId === s.id && r.userId === req.user.id)?.optionIndex ?? null,
+      results: surveyResults(s, db),
+    }));
+  res.json(list);
+});
+
+app.post('/api/surveys', auth(), staffOnly, (req, res) => {
+  const { title, question, options = [] } = req.body || {};
+  if (!title || !question || options.length < 2) return bad(res, 'Потрібні назва, питання і щонайменше 2 варіанти');
+  const s = {
+    id: uid('sur-'),
+    title,
+    question,
+    options,
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  };
+  getDb().surveys.push(s);
+  save();
+  audit(req.user.name, `Створив опитування «${title}»`);
+  notifyMembers(`Нове опитування: «${title}»`, '/surveys');
+  res.status(201).json(s);
+});
+
+app.delete('/api/surveys/:id', auth(), staffOnly, (req, res) => {
+  const db = getDb();
+  const s = db.surveys.find((x) => x.id === req.params.id);
+  db.surveys = db.surveys.filter((x) => x.id !== req.params.id);
+  db.surveyResponses = db.surveyResponses.filter((r) => r.surveyId !== req.params.id);
+  save();
+  if (s) audit(req.user.name, `Видалив опитування «${s.title}»`);
+  res.json({ message: 'Видалено' });
+});
+
+app.post('/api/surveys/:id/respond', auth(), memberOnly, (req, res) => {
+  const db = getDb();
+  const s = db.surveys.find((x) => x.id === req.params.id);
+  if (!s || s.status !== 'open') return bad(res, 'Опитування не знайдено або закрите', 404);
+  if (db.surveyResponses.some((r) => r.surveyId === s.id && r.userId === req.user.id))
+    return bad(res, 'Ви вже відповіли на це опитування', 403);
+  const { optionIndex } = req.body || {};
+  if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= s.options.length)
+    return bad(res, 'Невірний варіант');
+  db.surveyResponses.push({ id: uid('sr-'), surveyId: s.id, userId: req.user.id, optionIndex, at: new Date().toISOString() });
+  save();
+  res.json({ message: 'Відповідь прийнято' });
+});
+
+/* ---------------- ВІДГУКИ ---------------- */
+
+app.get('/api/members', auth(), (req, res) => {
+  const db = getDb();
+  res.json(
+    db.users
+      .filter((u) => u.status === 'member' && !u.blocked && u.id !== req.user.id)
+      .map((u) => ({ id: u.id, name: u.name, surname: u.surname || '' }))
+  );
+});
+
+app.get('/api/reviews/about/:userId', auth(), (req, res) => {
+  const list = getDb()
+    .reviews.filter((r) => r.aboutUserId === req.params.userId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  res.json(list);
+});
+
+app.post('/api/reviews', auth(), memberOnly, (req, res) => {
+  const db = getDb();
+  const { aboutUserId, rating, text = '' } = req.body || {};
+  const target = db.users.find((u) => u.id === aboutUserId);
+  if (!target) return bad(res, 'Користувача не знайдено', 404);
+  if (target.id === req.user.id) return bad(res, 'Не можна залишити відгук про себе');
+  if (db.reviews.some((r) => r.aboutUserId === target.id && r.fromUserId === req.user.id))
+    return bad(res, 'Ви вже залишали відгук про цього учасника', 403);
+  const r = Math.round(Number(rating));
+  if (!(r >= 1 && r <= 5)) return bad(res, 'Оцінка має бути від 1 до 5');
+  db.reviews.push({
+    id: uid('rev-'),
+    aboutUserId: target.id,
+    fromUserId: req.user.id,
+    fromName: req.user.name,
+    rating: r,
+    text,
+    createdAt: new Date().toISOString(),
+  });
+  save();
+  notifyUser(target.id, `${req.user.name} залишив про вас відгук`, '/dashboard');
+  res.status(201).json({ message: 'Відгук додано' });
+});
+
+/* ---------------- АДМІН: ВЕРИФІКАЦІЯ, ЖУРНАЛ, ЕКСПОРТ ---------------- */
+
+app.put('/api/admin/users/:id/status', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  const u = db.users.find((x) => x.id === req.params.id);
+  if (!u) return bad(res, 'Користувача не знайдено', 404);
+  const { status, blocked } = req.body || {};
+  if (status && ['pending', 'member'].includes(status)) {
+    const was = u.status;
+    u.status = status;
+    audit(req.user.name, `Змінив статус ${u.name} (${u.email}): ${was} → ${status}`);
+    if (status === 'member') notifyUser(u.id, 'Вас верифіковано — тепер доступні голосування та опитування', '/dashboard');
+  }
+  if (blocked !== undefined) {
+    u.blocked = !!blocked;
+    audit(req.user.name, `${u.blocked ? 'Заблокував' : 'Розблокував'} користувача ${u.name} (${u.email})`);
+  }
+  save();
+  res.json(publicUser(u));
+});
+
+app.get('/api/admin/audit', auth(), adminOnly, (req, res) => {
+  res.json([...getDb().auditLogs].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100));
+});
+
+app.get('/api/admin/reviews', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  res.json(
+    db.reviews.map((r) => {
+      const u = db.users.find((x) => x.id === r.aboutUserId);
+      const fullName = u ? `${u.name} ${u.surname || ''}`.trim() : '';
+      return { ...r, aboutName: fullName || (u ? u.email : '—') };
+    })
+  );
+});
+
+const csv = (rows) => '\uFEFF' + rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+
+app.get('/api/admin/export/users', auth(), adminOnly, (req, res) => {
+  const rows = [['Імʼя', 'Прізвище', 'Email', 'Телефон', 'Роль', 'Статус', 'Зареєстровано']];
+  for (const u of getDb().users)
+    rows.push([u.name, u.surname, u.email, u.phone, u.role, u.status, u.createdAt]);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename=members.csv');
+  res.send(csv(rows));
+});
+
+app.get('/api/admin/export/votes/:id', auth(), adminOnly, (req, res) => {
+  const v = getDb().votes.find((x) => x.id === req.params.id);
+  if (!v) return bad(res, 'Голосування не знайдено', 404);
+  const rows = [['Учасник', 'Голос', 'Час']];
+  for (const b of v.ballots) rows.push([b.userName, b.option, b.at]);
+  rows.push([], ['ЗА', 'ПРОТИ', 'УТРИМАЛИСЯ/інше'].map((_, i) => ''));
+  const counts = voteResults(v, getDb(), req.user).counts;
+  rows.push([Object.entries(counts).map(([k, n]) => `${k}: ${n}`).join(', ')]);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename=vote-${v.id}.csv`);
+  res.send(csv(rows));
+});
+
+app.get('/api/admin/export/surveys/:id', auth(), adminOnly, (req, res) => {
+  const db = getDb();
+  const s = db.surveys.find((x) => x.id === req.params.id);
+  if (!s) return bad(res, 'Опитування не знайдено', 404);
+  const res_ = surveyResults(s, db);
+  const rows = [['Питання', s.question], ['Варіант', 'Голосів', 'Відсоток']];
+  s.options.forEach((opt, i) => {
+    const pct = res_.total ? Math.round((res_.counts[i] / res_.total) * 100) : 0;
+    rows.push([opt, res_.counts[i], pct + '%']);
+  });
+  rows.push(['Разом', res_.total]);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename=survey-${s.id}.csv`);
+  res.send(csv(rows));
 });
 
 /* ---------------- СТАТИКА (зібраний фронтенд) ---------------- */

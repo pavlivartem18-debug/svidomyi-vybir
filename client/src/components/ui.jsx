@@ -100,6 +100,53 @@ export function Empty({ children }) {
   return <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">{children}</p>;
 }
 
+export function Tabs({ tabs, active, onChange }) {
+  return (
+    <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
+      {tabs.map(([key, label]) => (
+        <button
+          key={key}
+          onClick={() => onChange(key)}
+          className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition sm:px-4 ${
+            active === key
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Горизонтальна стовпчикова діаграма без зовнішніх бібліотек
+export function BarChart({ data, suffix = '' }) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+  return (
+    <div className="space-y-2">
+      {data.map((d) => (
+        <div key={d.label} className="flex items-center gap-3 text-sm">
+          <span className="w-20 shrink-0 text-slate-500 dark:text-slate-400">{d.label}</span>
+          <div className="h-4 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400"
+              style={{ width: `${(d.value / max) * 100}%` }}
+            />
+          </div>
+          <span className="w-12 shrink-0 text-right font-bold text-slate-700 dark:text-slate-200">
+            {d.value}{suffix}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export const Stars = ({ value }) => (
+  <span className="text-amber-400">{'★'.repeat(value)}{'☆'.repeat(5 - value)}</span>
+);
+
 export const fmtDate = (iso, lang = 'uk') =>
   new Date(iso).toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', {
     day: 'numeric', month: 'long', year: 'numeric',

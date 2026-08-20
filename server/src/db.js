@@ -18,6 +18,13 @@ const emptyDb = {
   volunteers: [],
   messages: [],
   subscribers: [],
+  meetings: [],
+  votes: [],
+  surveys: [],
+  surveyResponses: [],
+  reviews: [],
+  notifications: [],
+  auditLogs: [],
   resetTokens: {},
   verifyTokens: {},
 };

@@ -64,8 +64,11 @@ function AuthProvider({ children }) {
     return updated;
   };
 
+  // застосувати вже оновлені дані користувача без повторного запиту
+  const applyUser = (u) => setUser(u);
+
   return (
-    <AuthCtx.Provider value={{ user, ready, login, register, logout, updateProfile }}>
+    <AuthCtx.Provider value={{ user, ready, login, register, logout, updateProfile, applyUser }}>
       {children}
     </AuthCtx.Provider>
   );

@@ -1,6 +1,79 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth, useLang, useTheme } from '../context.jsx';
+import { api } from '../api.js';
+
+function NotificationsBell() {
+  const { t, lang } = useLang();
+  const [items, setItems] = useState([]);
+  const [open, setOpen] = useState(false);
+  const unread = items.filter((n) => !n.read).length;
+
+  const load = () => api('/api/notifications').then(setItems).catch(() => {});
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 60000); // оновлення кожну хвилину — «майже реальний час»
+    return () => clearInterval(timer);
+  }, []);
+
+  const markAll = async () => {
+    await api('/api/notifications/read-all', { method: 'POST' });
+    load();
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="relative rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+        title={t('nav.notifications')}
+      >
+        🔔
+        {unread > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+            {unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{t('nav.notifications')}</p>
+            {unread > 0 && (
+              <button onClick={markAll} className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                {lang === 'uk' ? 'Прочитати всі' : 'Mark all read'}
+              </button>
+            )}
+          </div>
+          {items.length === 0 ? (
+            <p className="py-4 text-center text-sm text-slate-400">
+              {lang === 'uk' ? 'Поки немає сповіщень' : 'No notifications yet'}
+            </p>
+          ) : (
+            <ul className="max-h-80 space-y-1 overflow-y-auto">
+              {items.slice(0, 12).map((n) => (
+                <li key={n.id}>
+                  <Link
+                    to={n.link || '/dashboard'}
+                    onClick={() => setOpen(false)}
+                    className={`block rounded-lg px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                      n.read ? 'text-slate-500 dark:text-slate-400' : 'font-semibold text-slate-800 dark:text-slate-100'
+                    }`}
+                  >
+                    {n.text}
+                    <span className="mt-0.5 block text-[10px] text-slate-400">
+                      {new Date(n.createdAt).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Navbar() {
   const { t, lang, setLang } = useLang();
@@ -15,6 +88,10 @@ export default function Navbar() {
     ['/news', t('nav.news')],
     ['/volunteer', t('nav.volunteer')],
     ['/contact', t('nav.contact')],
+  ];
+  const memberLinks = [
+    ['/meetings', t('nav.meetings')],
+    ['/surveys', t('nav.surveys')],
   ];
 
   const item = ({ isActive }) =>
@@ -55,11 +132,15 @@ export default function Navbar() {
           >
             {dark ? '☀️' : '🌙'}
           </button>
+          {user && <NotificationsBell />}
 
           {user ? (
             <div className="hidden items-center gap-1 lg:flex">
+              {memberLinks.map(([to, label]) => (
+                <NavLink key={to} to={to} className={item}>{label}</NavLink>
+              ))}
               <NavLink to="/dashboard" className={item}>{t('nav.dashboard')}</NavLink>
-              {user.role === 'admin' && (
+              {(user.role === 'admin' || user.role === 'deputy') && (
                 <NavLink to="/admin" className={item}>{t('nav.admin')}</NavLink>
               )}
               <button
@@ -94,8 +175,11 @@ export default function Navbar() {
           <hr className="my-2 border-slate-200 dark:border-slate-700" />
           {user ? (
             <>
+              {memberLinks.map(([to, label]) => (
+                <NavLink key={to} to={to} className={item} onClick={() => setOpen(false)}>{label}</NavLink>
+              ))}
               <NavLink to="/dashboard" className={item} onClick={() => setOpen(false)}>{t('nav.dashboard')}</NavLink>
-              {user.role === 'admin' && (
+              {(user.role === 'admin' || user.role === 'deputy') && (
                 <NavLink to="/admin" className={item} onClick={() => setOpen(false)}>{t('nav.admin')}</NavLink>
               )}
               <button onClick={() => { logout(); setOpen(false); }} className="rounded-lg px-3 py-2 text-left text-sm font-medium text-red-500">

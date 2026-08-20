@@ -27,4 +27,18 @@ export const adminOnly = (req, res, next) =>
     ? next()
     : res.status(403).json({ error: 'Потрібні права адміністратора' });
 
+// адміністратор або заступник (новини, опитування)
+export const staffOnly = (req, res, next) =>
+  ['admin', 'deputy'].includes(req.user?.role)
+    ? next()
+    : res.status(403).json({ error: 'Потрібні права адміністратора або заступника' });
+
+// верифікований член організації (голосування, опитування, відгуки)
+export const memberOnly = (req, res, next) => {
+  if (req.user?.blocked) return res.status(403).json({ error: 'Ваш акаунт заблоковано' });
+  if (req.user?.status !== 'member')
+    return res.status(403).json({ error: 'Доступно лише верифікованим членам організації' });
+  next();
+};
+
 export const publicUser = ({ password, verifyToken, ...rest }) => rest;

@@ -95,8 +95,8 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('home.about')}</h2>
             <p className="mt-3 text-slate-600 dark:text-slate-300">
               {lang === 'uk'
-                ? 'Організація «Свідомий Вибір» працює з 2015 року. Ми організовуємо освітні програми, еко-акції та волонтерські проєкти. За цей час до наших ініціатив долучилися понад 3 000 людей.'
-                : 'Svidomyi Vybir has been operating since 2015. We run educational programs, eco-actions and volunteer projects. Over 3,000 people have joined our initiatives.'}
+                ? 'Молодіжне обʼєднання «Свідомий Вибір» працює з 2015 року. Ми організовуємо освітні програми, еко-акції та волонтерські проєкти, проводимо засідання з поіменним голосуванням. За цей час до наших ініціатив долучилися понад 3 000 людей.'
+                : 'Svidomyi Vybir Youth Association has been operating since 2015. We run educational programs, eco-actions, volunteer projects and meetings with named voting. Over 3,000 people have joined our initiatives.'}
             </p>
             <Btn to="/about" variant="outline" className="mt-4">{t('nav.about')}</Btn>
           </div>

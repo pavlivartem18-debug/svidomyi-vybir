@@ -36,7 +36,7 @@ export default function Footer() {
         </div>
       </div>
       <p className="border-t border-slate-200 py-4 text-center text-xs text-slate-400 dark:border-slate-800">
-        © {new Date().getFullYear()} {lang === 'uk' ? 'Організація «Свідомий Вибір»' : 'Svidomyi Vybir Organization'}
+        © {new Date().getFullYear()} {lang === 'uk' ? 'Молодіжне обʼєднання «Свідомий Вибір»' : 'Svidomyi Vybir Youth Association'}
       </p>
     </footer>
   );

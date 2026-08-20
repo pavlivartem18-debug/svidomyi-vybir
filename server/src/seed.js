@@ -15,26 +15,52 @@ export function seedIfEmpty() {
   const admin = {
     id: uid('u-'),
     name: 'Адміністратор',
+    surname: '',
     email: 'admin@org.ua',
     password: bcrypt.hashSync('Admin123!', 10),
     phone: '+380 50 000 0001',
     interests: ['ecology', 'education'],
     role: 'admin',
+    status: 'member',
+    blocked: false,
+    about: '',
+    avatar: '',
+    verified: true,
+    createdAt: new Date().toISOString(),
+  };
+  const deputy = {
+    id: uid('u-'),
+    name: 'Заступник',
+    surname: '',
+    email: 'deputy@org.ua',
+    password: bcrypt.hashSync('Deputy123!', 10),
+    phone: '+380 50 000 0003',
+    interests: ['education'],
+    role: 'deputy',
+    status: 'member',
+    blocked: false,
+    about: '',
+    avatar: '',
     verified: true,
     createdAt: new Date().toISOString(),
   };
   const member = {
     id: uid('u-'),
     name: 'Демо Користувач',
+    surname: '',
     email: 'demo@org.ua',
     password: bcrypt.hashSync('Demo1234!', 10),
     phone: '+380 50 000 0002',
     interests: ['volunteering', 'culture'],
     role: 'member',
+    status: 'member',
+    blocked: false,
+    about: 'Прихильник екоініціатив та молодіжних проєктів.',
+    avatar: '',
     verified: true,
     createdAt: new Date().toISOString(),
   };
-  db.users.push(admin, member);
+  db.users.push(admin, deputy, member);
 
   db.news.push(
     {
@@ -155,6 +181,93 @@ export function seedIfEmpty() {
   );
 
   db.subscribers.push({ id: uid('s-'), email: 'friend@example.com', createdAt: new Date().toISOString() });
+
+  const meetingId = uid('m-');
+  db.meetings.push({
+    id: meetingId,
+    title: 'Загальні збори організації',
+    startsAt: daysFromNow(7, 18),
+    location: 'Офіс організації, вул. Хрещатик 22',
+    format: 'очно',
+    description: 'Підсумки сезону, планування нових проєктів та голосування щодо програми діяльності.',
+    agenda: [
+      {
+        id: uid('a-'),
+        number: 1,
+        title: 'Звіт про діяльність за рік',
+        description: 'Голова презентує підсумки діяльності та фінансовий звіт.',
+        responsible: admin.name,
+        status: 'показується',
+      },
+      {
+        id: uid('a-'),
+        number: 2,
+        title: 'Затвердження плану діяльності на новий сезон',
+        description: 'Обговорення та поіменне голосування щодо нового плану діяльності.',
+        responsible: deputy.name,
+        status: 'очікує',
+      },
+    ],
+    rsvps: [{ userId: member.id, answer: 'yes', at: daysFromNow(-1, 12) }],
+    createdAt: daysFromNow(-14, 10),
+  });
+
+  db.votes.push({
+    id: uid('v-'),
+    title: 'Затвердження положення про волонтерську програму',
+    question: 'Чи підтримуєте Ви затвердження нового положення про волонтерську програму?',
+    meetingId,
+    agendaNumber: 1,
+    options: ['ЗА', 'ПРОТИ', 'УТРИМАВСЯ'],
+    status: 'closed',
+    ballots: [
+      { userId: admin.id, userName: admin.name + ' ' + admin.surname, option: 'ЗА', at: daysFromNow(-2, 18) },
+      { userId: member.id, userName: member.name + ' ' + member.surname, option: 'ЗА', at: daysFromNow(-2, 18) },
+      { userId: deputy.id, userName: deputy.name + ' ' + deputy.surname, option: 'УТРИМАВСЯ', at: daysFromNow(-2, 18) },
+    ],
+    createdAt: daysFromNow(-2, 18),
+    closedAt: daysFromNow(-2, 19),
+  });
+
+  db.surveys.push({
+    id: uid('sur-'),
+    title: 'Опитування: теми наступних воркшопів',
+    question: 'Яку тему воркшопу обрати наступною?',
+    options: ['Еко-торбинки', 'Грантрайтинг', 'Медіаграмотність'],
+    status: 'open',
+    createdAt: daysFromNow(-1, 10),
+  });
+  db.surveyResponses.push(
+    { id: uid('sr-'), surveyId: db.surveys[0].id, userId: admin.id, optionIndex: 1, at: daysFromNow(-1, 12) },
+    { id: uid('sr-'), surveyId: db.surveys[0].id, userId: member.id, optionIndex: 0, at: daysFromNow(-1, 13) }
+  );
+
+  db.reviews.push({
+    id: uid('rev-'),
+    aboutUserId: member.id,
+    fromUserId: admin.id,
+    fromName: admin.name,
+    rating: 5,
+    text: 'Дуже активний учасник, завжди допомагає з організацією подій!',
+    createdAt: daysFromNow(-5, 15),
+  });
+
+  db.notifications.push({
+    id: uid('nt-'),
+    userId: member.id,
+    text: 'Створено нове засідання: «Загальні збори організації»',
+    link: '/meetings',
+    read: false,
+    createdAt: daysFromNow(-14, 10),
+  });
+
+  db.auditLogs.push({
+    id: uid('log-'),
+    actorName: admin.name,
+    action: 'Створив засідання «Загальні збори організації»',
+    createdAt: daysFromNow(-14, 10),
+  });
+
   save();
-  console.log('Seed-дані створено. Адмін: admin@org.ua / Admin123! | demo@org.ua / Demo1234!');
+  console.log('Seed-дані створено. Адмін: admin@org.ua / Admin123! | заступник: deputy@org.ua / Deputy123! | demo@org.ua / Demo1234!');
 }

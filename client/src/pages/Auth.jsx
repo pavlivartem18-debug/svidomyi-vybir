@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, useLang } from '../context.jsx';
-import { Field, Btn, Alert, Card } from '../components/ui.jsx';
+import { Field, TextArea, Btn, Alert, Card } from '../components/ui.jsx';
 import { interestCats } from '../i18n.js';
 
 function AuthLayout({ title, children }) {
@@ -47,7 +47,9 @@ export function Login() {
         <Link to="/register" className="text-blue-600 hover:underline dark:text-blue-400">{t('nav.register')}</Link>
       </div>
       <p className="mt-4 rounded-lg bg-slate-50 p-3 text-center text-xs text-slate-500 dark:bg-slate-900">
-        {lang === 'uk' ? 'Демо: admin@org.ua / Admin123! або demo@org.ua / Demo1234!' : 'Demo: admin@org.ua / Admin123! or demo@org.ua / Demo1234!'}
+        {lang === 'uk'
+          ? 'Демо-акаунти — адмін: admin@org.ua / Admin123! · заступник: deputy@org.ua / Deputy123! · член: demo@org.ua / Demo1234!'
+          : 'Demo accounts — admin: admin@org.ua / Admin123! · deputy: deputy@org.ua / Deputy123! · member: demo@org.ua / Demo1234!'}
       </p>
     </AuthLayout>
   );
@@ -55,10 +57,11 @@ export function Login() {
 
 export function Register() {
   const { t, lang } = useLang();
-  const { register, login } = useAuth();
+  const { login } = useAuth();
   const nav = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [form, setForm] = useState({ name: '', surname: '', email: '', password: '', phone: '', about: '' });
   const [interests, setInterests] = useState([]);
+  const [avatar, setAvatar] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -71,7 +74,11 @@ export function Register() {
     setErr(null);
     setBusy(true);
     try {
-      await register({ ...form, interests });
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(form)) fd.append(k, v);
+      fd.append('interests', interests);
+      if (avatar) fd.append('avatar', avatar);
+      await api('/api/auth/register', { method: 'POST', body: fd, isForm: true });
       // акаунт активний одразу — відразу входимо і ведемо в кабінет
       const user = await login(form.email, form.password);
       nav(user.role === 'admin' ? '/admin' : '/dashboard');
@@ -84,10 +91,25 @@ export function Register() {
   return (
     <AuthLayout title={t('nav.register')}>
       <form onSubmit={submit} className="space-y-4">
-        <Field label={t('name')} required value={form.name} onChange={set('name')} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('name')} required value={form.name} onChange={set('name')} />
+          <Field label={lang === 'uk' ? 'Прізвище' : 'Surname'} value={form.surname} onChange={set('surname')} />
+        </div>
         <Field label={t('email')} type="email" required value={form.email} onChange={set('email')} />
         <Field label={t('password')} type="password" required minLength={8} value={form.password} onChange={set('password')} />
         <Field label={t('phone')} value={form.phone} onChange={set('phone')} />
+        <TextArea label={lang === 'uk' ? 'Коротко про себе' : 'About you'} rows={3} value={form.about} onChange={set('about')} />
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-slate-700 dark:text-slate-200">
+            {lang === 'uk' ? 'Фотографія профілю' : 'Profile photo'}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setAvatar(e.target.files[0])}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
+          />
+        </label>
         <div>
           <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">{t('interests')}</p>
           <div className="flex flex-wrap gap-2">
@@ -107,6 +129,11 @@ export function Register() {
             ))}
           </div>
         </div>
+        <Alert>
+          {lang === 'uk'
+            ? 'Після реєстрації ви одразу потрапите у кабінет. Статус «члена організації» (дозволяє голосувати й проходити опитування) призначає адміністратор після перевірки.'
+            : 'After registration you get instant access. The “organization member” status (enables voting and surveys) is granted by the administrator after verification.'}
+        </Alert>
         {err && <Alert kind="error">{err}</Alert>}
         <Btn type="submit" disabled={busy} className="w-full">
           {busy ? '…' : t('nav.register')}
