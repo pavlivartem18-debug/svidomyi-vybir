@@ -56,16 +56,15 @@ app.post('/api/auth/register', async (req, res) => {
     phone: phone || '',
     interests,
     role: 'member',
-    verified: false,
+    // прототип: реальні листи не надсилаються, тому акаунт активний одразу
+    verified: true,
     createdAt: new Date().toISOString(),
   };
   db.users.push(user);
   save();
 
-  const token = makeVerifyToken(user.id);
-  const verifyUrl = `${linkBase(req)}/verify-email/${token}`;
-  sendEmail(user.email, 'Підтвердження email', `Перейдіть за посиланням: ${verifyUrl}`);
-  res.status(201).json({ message: 'Зареєстровано. Підтвердіть email.', verifyUrl });
+  sendEmail(user.email, 'Вітаемо в «Свідомому Виборі»!', 'Ваш обліковий запис створено.');
+  res.status(201).json({ message: 'Обліковий запис створено.' });
 });
 
 app.get('/api/auth/verify/:token', (req, res) => {

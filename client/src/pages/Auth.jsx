@@ -55,12 +55,12 @@ export function Login() {
 
 export function Register() {
   const { t, lang } = useLang();
-  const { register } = useAuth();
+  const { register, login } = useAuth();
+  const nav = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [interests, setInterests] = useState([]);
-  const [msg, setMsg] = useState(null);
-  const [verifyUrl, setVerifyUrl] = useState(null);
   const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const toggle = (key) =>
@@ -69,32 +69,17 @@ export function Register() {
   const submit = async (e) => {
     e.preventDefault();
     setErr(null);
+    setBusy(true);
     try {
-      const res = await register({ ...form, interests });
-      setMsg(res.message);
-      setVerifyUrl(res.verifyUrl);
+      await register({ ...form, interests });
+      // акаунт активний одразу — відразу входимо і ведемо в кабінет
+      const user = await login(form.email, form.password);
+      nav(user.role === 'admin' ? '/admin' : '/dashboard');
     } catch (ex) {
       setErr(ex.message);
+      setBusy(false);
     }
   };
-
-  if (msg)
-    return (
-      <AuthLayout title="✉️">
-        <Alert kind="success">{msg}</Alert>
-        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          {lang === 'uk'
-            ? 'У прототипі листи виводяться в консоль сервера. Перейдіть за посиланням підтвердження:'
-            : 'In the prototype emails are printed to the server console. Open the confirmation link:'}
-        </p>
-        <a href={verifyUrl} className="mt-2 block break-all text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">
-          {verifyUrl}
-        </a>
-        <Link to="/login" className="mt-4 block text-center text-sm text-blue-600 hover:underline dark:text-blue-400">
-          {t('login')} →
-        </Link>
-      </AuthLayout>
-    );
 
   return (
     <AuthLayout title={t('nav.register')}>
@@ -123,7 +108,9 @@ export function Register() {
           </div>
         </div>
         {err && <Alert kind="error">{err}</Alert>}
-        <Btn type="submit" className="w-full">{t('nav.register')}</Btn>
+        <Btn type="submit" disabled={busy} className="w-full">
+          {busy ? '…' : t('nav.register')}
+        </Btn>
       </form>
       <p className="mt-4 text-center text-sm">
         <Link to="/login" className="text-blue-600 hover:underline dark:text-blue-400">{t('login')}</Link>
