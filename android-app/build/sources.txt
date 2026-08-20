@@ -1,0 +1,2 @@
+build/gen/ua/org/svidomyivybir/app/R.java
+app/src/main/java/ua/org/svidomyivybir/app/MainActivity.java

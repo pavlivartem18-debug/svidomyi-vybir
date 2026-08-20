@@ -1,0 +1,6 @@
+ua/org/svidomyivybir/app/MainActivity$1.class
+ua/org/svidomyivybir/app/MainActivity$2.class
+ua/org/svidomyivybir/app/MainActivity.class
+ua/org/svidomyivybir/app/R$mipmap.class
+ua/org/svidomyivybir/app/R$string.class
+ua/org/svidomyivybir/app/R.class
