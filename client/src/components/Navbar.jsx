@@ -86,6 +86,7 @@ export default function Navbar() {
     ['/about', t('nav.about')],
     ['/events', t('nav.events')],
     ['/news', t('nav.news')],
+    ['/downloads', t('nav.downloads')],
     ['/volunteer', t('nav.volunteer')],
     ['/contact', t('nav.contact')],
   ];

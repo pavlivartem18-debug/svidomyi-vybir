@@ -16,6 +16,7 @@ import Meetings from './pages/Meetings.jsx';
 import MeetingDetail from './pages/MeetingDetail.jsx';
 import VoteDetail from './pages/VoteDetail.jsx';
 import Surveys from './pages/Surveys.jsx';
+import Downloads from './pages/Downloads.jsx';
 import { Login, Register, Forgot, Reset, VerifyEmail } from './pages/Auth.jsx';
 
 function Protected({ children, adminOnly = false }) {
@@ -38,6 +39,7 @@ function Shell() {
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/news" element={<News />} />
           <Route path="/news/:id" element={<NewsDetail />} />
+          <Route path="/downloads" element={<Downloads />} />
           <Route path="/volunteer" element={<Volunteer />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />

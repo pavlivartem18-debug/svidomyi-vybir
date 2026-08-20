@@ -25,6 +25,29 @@ const upload = multer({
     /^image\//.test(file.mimetype) ? cb(null, true) : cb(new Error('Лише зображення')),
 });
 
+// Документи для розділу «Завантаження»: PDF, Office, зображення, архіви — до 20 МБ
+const DOC_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/zip',
+  'text/plain',
+  'text/csv',
+  /^image\//,
+];
+const docUpload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) =>
+    DOC_TYPES.some((t) => (t instanceof RegExp ? t.test(file.mimetype) : t === file.mimetype))
+      ? cb(null, true)
+      : cb(new Error('Непідтримуваний тип файлу')),
+});
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -888,6 +911,57 @@ app.get('/api/admin/export/surveys/:id', auth(), adminOnly, (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename=survey-${s.id}.csv`);
   res.send(csv(rows));
+});
+
+/* ---------------- ЗАВАНТАЖЕННЯ (ДОКУМЕНТИ) ---------------- */
+
+const fileIcon = (mimetype, filename = '') => {
+  if (/^image\//.test(mimetype)) return '🖼️';
+  if (mimetype === 'application/pdf' || /\.pdf$/i.test(filename)) return '📕';
+  if (/word|document/i.test(mimetype) || /\.docx?$/i.test(filename)) return '📘';
+  if (/sheet|excel/i.test(mimetype) || /\.xlsx?$/i.test(filename)) return '📗';
+  if (/presentation|powerpoint/i.test(mimetype) || /\.pptx?$/i.test(filename)) return '📙';
+  if (/zip/.test(mimetype) || /\.zip$/i.test(filename)) return '🗜️';
+  return '📄';
+};
+
+app.get('/api/documents', (req, res) => {
+  const db = getDb();
+  const list = [...db.documents]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((d) => ({ ...d, icon: fileIcon(d.mimetype, d.filename) }));
+  res.json(list);
+});
+
+app.post('/api/documents', auth(), staffOnly, docUpload.single('file'), (req, res) => {
+  const { title, description = '' } = req.body || {};
+  if (!title) return bad(res, 'Назва обовʼязкова');
+  if (!req.file) return bad(res, 'Файл не надіслано');
+  const item = {
+    id: uid('doc-'),
+    title,
+    description,
+    filename: req.file.originalname,
+    path: `/uploads/${req.file.filename}`,
+    mimetype: req.file.mimetype,
+    size: req.file.size,
+    uploadedBy: req.user.name,
+    createdAt: new Date().toISOString(),
+  };
+  getDb().documents.push(item);
+  save();
+  audit(req.user.name, `Завантажив документ «${title}»`);
+  notifyMembers(`Новий документ у розділі «Завантаження»: «${title}»`, '/downloads');
+  res.status(201).json(item);
+});
+
+app.delete('/api/documents/:id', auth(), staffOnly, (req, res) => {
+  const db = getDb();
+  const item = db.documents.find((d) => d.id === req.params.id);
+  db.documents = db.documents.filter((d) => d.id !== req.params.id);
+  save();
+  if (item) audit(req.user.name, `Видалив документ «${item.title}»`);
+  res.json({ message: 'Видалено' });
 });
 
 /* ---------------- СТАТИКА (зібраний фронтенд) ---------------- */

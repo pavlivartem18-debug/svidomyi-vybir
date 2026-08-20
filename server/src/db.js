@@ -21,6 +21,7 @@ const emptyDb = {
   meetings: [],
   votes: [],
   surveys: [],
+  documents: [],
   surveyResponses: [],
   reviews: [],
   notifications: [],
