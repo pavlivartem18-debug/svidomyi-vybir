@@ -6,6 +6,110 @@ body {
   @apply bg-white text-slate-800 antialiased dark:bg-slate-900 dark:text-slate-100;
 }
 
+/* ============ АНІМАЦІЇ ============ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.8); }
+  70% { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
+}
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+}
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(239 68 68 / 0.5); }
+  50% { box-shadow: 0 0 0 8px rgb(239 68 68 / 0); }
+}
+
+.anim-fade-up { animation: fadeUp 0.5s ease both; }
+.anim-pop { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.anim-slide-down { animation: slideDown 0.25s ease both; }
+.anim-float { animation: float 4s ease-in-out infinite; }
+.anim-wiggle { animation: wiggle 0.7s ease-in-out infinite; }
+.anim-pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+
+/* «живий» градієнт гойдається */
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: gradientMove 10s ease infinite;
+}
+
+/* перехід між сторінками */
+.page-enter { animation: fadeUp 0.35s ease both; }
+
+/* появлення блоків при скролі */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* картки піднімаються при наведенні */
+.hover-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 28px -10px rgb(15 23 42 / 0.25);
+}
+
+/* кнопки: підйом при наведенні, пружина при натисканні */
+.btn-press {
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.btn-press:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+.btn-press:active {
+  transform: scale(0.95);
+}
+
+/* фото збільшується всередині картки */
+.zoom-img {
+  transition: transform 0.5s ease;
+}
+.group:hover .zoom-img {
+  transform: scale(1.07);
+}
+
+/* повзунки графіків анімовано ростуть */
+.bar-grow {
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* делікатно для користувачів, які вимкнули анімації в системі */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Друк протоколів: лише документ, без меню сайту */
 @media print {
   header, footer, nav { display: none !important; }

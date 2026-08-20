@@ -39,12 +39,14 @@ function Stats() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {items.map(([emoji, label, value]) => (
-          <Card key={label} className="text-center">
-            <p className="text-2xl">{emoji}</p>
-            <p className="mt-1 text-2xl font-extrabold text-blue-600 dark:text-blue-400">{value}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
-          </Card>
+        {items.map(([emoji, label, value], i) => (
+          <div key={label} className="anim-pop" style={{ animationDelay: `${i * 0.05}s` }}>
+            <Card className="hover-lift text-center">
+              <p className="text-2xl">{emoji}</p>
+              <p className="mt-1 text-2xl font-extrabold text-blue-600 dark:text-blue-400">{value}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+            </Card>
+          </div>
         ))}
       </div>
       {stats.months && (
@@ -486,7 +488,7 @@ function SurveysTab() {
                     <div key={i} className="flex items-center gap-3 text-xs">
                       <span className="w-32 shrink-0 truncate text-slate-600 dark:text-slate-300">{opt}</span>
                       <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                        <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style={{ width: `${pct}%` }} />
+                        <div className="bar-grow h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="w-16 shrink-0 text-right font-bold text-slate-500">{pct}% ({s.results.counts[i]})</span>
                     </div>

@@ -78,7 +78,7 @@ export default function Surveys() {
                         <div key={i} className="flex items-center gap-3 text-sm">
                           <span className="w-32 shrink-0 truncate text-slate-600 dark:text-slate-300">{opt}</span>
                           <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style={{ width: `${pct}%` }} />
+                            <div className="bar-grow h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style={{ width: `${pct}%` }} />
                           </div>
                           <span className="w-14 shrink-0 text-right text-xs font-bold text-slate-500">
                             {pct}% ({s.results.counts[i]})

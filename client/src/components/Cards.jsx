@@ -7,10 +7,10 @@ import { imgUrl } from '../api.js';
 export function NewsCard({ news }) {
   const { lang } = useLang();
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
+    <article className="group hover-lift flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div className="h-44 w-full overflow-hidden bg-gradient-to-br from-blue-500 to-emerald-400">
         {news.image && (
-          <img src={imgUrl(news.image)} alt={news.title} className="h-full w-full object-cover" />
+          <img src={imgUrl(news.image)} alt={news.title} className="zoom-img h-full w-full object-cover" />
         )}
       </div>
       <div className="flex flex-1 flex-col p-5">
@@ -32,8 +32,8 @@ export function EventCard({ event, compact = false }) {
   const { lang, t } = useLang();
   const d = new Date(event.startsAt);
   return (
-    <article className="flex gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
-      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-blue-600 text-white">
+    <article className="hover-lift flex h-full gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-blue-600 text-white transition-transform duration-300 group-hover:scale-105">
         <span className="text-2xl font-extrabold leading-none">{d.getDate()}</span>
         <span className="text-[10px] uppercase">
           {d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', { month: 'short' })}

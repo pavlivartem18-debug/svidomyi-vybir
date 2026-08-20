@@ -54,7 +54,7 @@ export default function VoteDetail() {
                 key={opt}
                 onClick={() => cast(opt)}
                 disabled={user?.status !== 'member'}
-                className={`rounded-xl px-4 py-4 text-lg font-extrabold text-white transition disabled:opacity-40 ${btnColor(opt)}`}
+                className={`btn-press rounded-xl px-4 py-4 text-lg font-extrabold text-white transition disabled:opacity-40 ${btnColor(opt)}`}
               >
                 {opt}
               </button>

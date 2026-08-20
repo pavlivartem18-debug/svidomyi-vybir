@@ -25,7 +25,7 @@ function NotificationsBell() {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="relative rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
+        className={`relative rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800 ${unread > 0 ? 'anim-wiggle' : ''}`}
         title={t('nav.notifications')}
       >
         🔔
@@ -36,7 +36,7 @@ function NotificationsBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+        <div className="anim-slide-down absolute right-0 z-50 mt-2 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-bold text-slate-900 dark:text-white">{t('nav.notifications')}</p>
             {unread > 0 && (

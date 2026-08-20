@@ -103,7 +103,7 @@ function Overview() {
                 <div key={label} className="flex items-center gap-3 text-sm">
                   <span className="w-40 shrink-0 text-slate-500 dark:text-slate-400">{label}</span>
                   <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                    <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style={{ width: `${d.pct}%` }} />
+                    <div className="bar-grow h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style={{ width: `${d.pct}%` }} />
                   </div>
                   <span className="w-16 shrink-0 text-right text-xs font-bold text-slate-500">{d.pct}% ({d.mine}/{d.total})</span>
                 </div>
@@ -445,7 +445,7 @@ function Achievements() {
         {data.achievements.map((a) => (
           <div
             key={a.code}
-            className={`rounded-xl border p-4 text-center transition ${
+            className={`hover-lift anim-pop rounded-xl border p-4 text-center transition ${
               a.done
                 ? 'border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-slate-800'
                 : 'border-slate-200 bg-white opacity-60 dark:border-slate-700 dark:bg-slate-800'

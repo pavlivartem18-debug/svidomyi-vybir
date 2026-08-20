@@ -59,7 +59,7 @@ export default function Calendar({ events = [], selected, onSelect }) {
             <button
               key={key}
               onClick={() => onSelect?.(has || isSel ? date : date)}
-              className={`relative aspect-square rounded-lg text-sm transition ${
+              className={`relative aspect-square rounded-lg text-sm transition hover:scale-110 hover:shadow-md ${
                 isSel
                   ? 'bg-blue-600 text-white'
                   : isToday

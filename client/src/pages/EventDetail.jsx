@@ -58,8 +58,8 @@ function Gallery({ eventId, photos, isStaff, onChange }) {
         </div>
       )}
       {lightbox && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setLightbox(null)}>
-          <img src={lightbox} alt="" className="max-h-[90vh] max-w-full rounded-lg" />
+        <div className="anim-slide-down fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="" className="anim-pop max-h-[90vh] max-w-full rounded-lg" />
         </div>
       )}
     </div>
