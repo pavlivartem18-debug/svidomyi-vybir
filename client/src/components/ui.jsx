@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 
 const variants = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white',
-  accent: 'bg-emerald-500 hover:bg-emerald-600 text-white',
-  outline: 'border border-blue-600 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-slate-800',
+  primary: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-soft-blue hover:shadow-lg',
+  accent: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-soft-green hover:shadow-lg',
+  outline: 'border-2 border-blue-600/70 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-slate-800',
   ghost: 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
-  danger: 'bg-red-500 hover:bg-red-600 text-white',
+  danger: 'bg-gradient-to-r from-red-500 to-rose-500 text-white',
 };
 
 export function Btn({ to, onClick, type = 'button', variant = 'primary', children, className = '', disabled }) {
@@ -66,11 +66,11 @@ export function Alert({ kind = 'info', children }) {
 
 export function Badge({ color = 'blue', children }) {
   const map = {
-    blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
-    green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200',
-    slate: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+    blue: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+    green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+    slate: 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300',
   };
-  return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${map[color]}`}>{children}</span>;
+  return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold ${map[color]}`}>{children}</span>;
 }
 
 export function Section({ title, subtitle, children, actions }) {
@@ -90,7 +90,7 @@ export function Section({ title, subtitle, children, actions }) {
 
 export function Card({ children, className = '' }) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 ${className}`}>
+    <div className={`shadow-soft rounded-2xl border border-slate-100 bg-white p-5 dark:border-slate-700/60 dark:bg-slate-800 ${className}`}>
       {children}
     </div>
   );

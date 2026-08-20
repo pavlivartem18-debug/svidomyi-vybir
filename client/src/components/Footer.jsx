@@ -4,7 +4,8 @@ import { useLang } from '../context.jsx';
 export default function Footer() {
   const { t, lang } = useLang();
   return (
-    <footer className="mt-10 border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950">
+    <footer className="mt-10 border-t border-slate-200 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-950">
+      <div className="h-1 w-full bg-gradient-to-r from-blue-600 via-emerald-500 to-blue-600" />
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3">
         <div>
           <p className="mb-2 text-lg font-extrabold text-blue-600 dark:text-blue-400">

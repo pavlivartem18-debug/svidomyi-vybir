@@ -4,6 +4,62 @@
 
 body {
   @apply bg-white text-slate-800 antialiased dark:bg-slate-900 dark:text-slate-100;
+  font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  scroll-behavior: smooth;
+}
+
+/* кольоровий вибір тексту та елегантний скролбар */
+::selection {
+  background: rgb(37 99 235 / 0.2);
+}
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(100 116 139 / 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(59 130 246 / 0.55);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* скляні поверхні */
+.glass {
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.dark .glass {
+  background: rgb(15 23 42 / 0.72);
+}
+
+/* м'які кольорові тіні замість рамок */
+.shadow-soft {
+  box-shadow: 0 4px 24px -6px rgb(15 23 42 / 0.08), 0 2px 6px -2px rgb(15 23 42 / 0.05);
+}
+.dark .shadow-soft {
+  box-shadow: 0 4px 24px -6px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+}
+.shadow-soft-blue {
+  box-shadow: 0 8px 30px -6px rgb(37 99 235 / 0.25);
+}
+.shadow-soft-green {
+  box-shadow: 0 8px 30px -6px rgb(16 185 129 / 0.3);
+}
+
+/* градієнтний текст */
+.text-gradient {
+  background: linear-gradient(90deg, #2563eb, #059669);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* ============ АНІМАЦІЇ ============ */

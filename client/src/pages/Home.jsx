@@ -45,33 +45,45 @@ export default function Home() {
           <span className="anim-float absolute left-[16%] bottom-[18%] text-4xl opacity-25" style={{ animationDelay: '2.1s' }}>🤝</span>
           <span className="anim-float absolute right-[18%] bottom-[22%] text-4xl opacity-25" style={{ animationDelay: '0.7s' }}>📚</span>
         </div>
-        <div className="relative mx-auto max-w-6xl px-4 py-20 text-center">
-          <h1 className="anim-fade-up mx-auto max-w-3xl text-4xl font-extrabold leading-tight sm:text-5xl" style={{ animationDelay: '0.1s' }}>
+        <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
+          <p className="anim-fade-up mx-auto mb-5 w-fit rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur" style={{ animationDelay: '0s' }}>
+            {lang === 'uk' ? '✊ Молодь, що змінює світ' : '✊ Youth changing the world'}
+          </p>
+          <h1 className="anim-fade-up mx-auto max-w-3xl text-4xl font-extrabold leading-tight drop-shadow-md sm:text-6xl" style={{ animationDelay: '0.1s' }}>
             {t('hero.title')}
           </h1>
-          <p className="anim-fade-up mx-auto mt-4 max-w-2xl text-lg text-blue-50" style={{ animationDelay: '0.25s' }}>
+          <p className="anim-fade-up mx-auto mt-5 max-w-2xl text-lg text-blue-50 sm:text-xl" style={{ animationDelay: '0.25s' }}>
             {t('hero.subtitle')}
           </p>
-          <div className="anim-fade-up mt-8 flex flex-wrap justify-center gap-3" style={{ animationDelay: '0.4s' }}>
-            <Btn to="/volunteer" variant="accent" className="px-6 py-3">{t('hero.cta')}</Btn>
-            <Btn to="/events" variant="outline" className="!border-white !text-white hover:!bg-white/10 px-6 py-3">
+          <div className="anim-fade-up mt-9 flex flex-wrap justify-center gap-3" style={{ animationDelay: '0.4s' }}>
+            <Btn to="/volunteer" variant="accent" className="px-7 py-3.5 text-base">{t('hero.cta')}</Btn>
+            <Btn to="/events" variant="outline" className="!border-white/80 !text-white hover:!bg-white/15 px-7 py-3.5 text-base">
               {t('hero.events')}
             </Btn>
           </div>
         </div>
+        {/* хвилеподібний перехід до контенту */}
+        <svg className="relative block w-full text-white dark:text-slate-900" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,40 C240,80 480,0 720,30 C960,60 1200,20 1440,45 L1440,70 L0,70 Z" fill="currentColor" />
+        </svg>
       </section>
 
       {/* Статистика */}
-      <section className="mx-auto -mt-8 max-w-6xl px-4">
-        <div className="grid grid-cols-3 gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      <section className="mx-auto -mt-2 max-w-6xl px-4">
+        <div className="grid grid-cols-3 gap-3 sm:gap-5">
           {[
-            ['500+', t('members')],
-            [events.length ? events.length + 10 : 12, t('eventsCount')],
-            [news.length + 20, t('newsCount')],
-          ].map(([num, label], i) => (
-            <div key={i} className="anim-pop text-center" style={{ animationDelay: `${0.15 + i * 0.12}s` }}>
-              <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400">{num}</p>
-              <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+            ['👥', '500+', t('members'), 'from-blue-500 to-indigo-500', 'shadow-soft-blue'],
+            ['🎪', events.length ? events.length + 10 : 12, t('eventsCount'), 'from-emerald-500 to-teal-500', 'shadow-soft-green'],
+            ['📰', news.length + 20, t('newsCount'), 'from-violet-500 to-fuchsia-500', 'shadow-soft-blue'],
+          ].map(([emoji, num, label, gradient, shadow], i) => (
+            <div
+              key={i}
+              className={`anim-pop hover-lift rounded-2xl bg-gradient-to-br ${gradient} ${shadow} p-5 text-center text-white sm:p-7`}
+              style={{ animationDelay: `${0.15 + i * 0.12}s` }}
+            >
+              <p className="text-2xl sm:text-3xl">{emoji}</p>
+              <p className="mt-1 text-3xl font-extrabold drop-shadow-sm sm:text-4xl">{num}</p>
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-white/80 sm:text-xs">{label}</p>
             </div>
           ))}
         </div>
