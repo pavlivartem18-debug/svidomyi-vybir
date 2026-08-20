@@ -12,10 +12,9 @@ export default function Footer() {
             {lang === 'uk' ? 'Свідомий Вибір' : 'Svidomyi Vybir'}
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">{t('footer.text')}</p>
-          <div className="mt-3 flex gap-3 text-sm">
-            <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-blue-600">Facebook</a>
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-blue-600">Instagram</a>
-            <a href="https://t.me" target="_blank" rel="noreferrer" className="hover:text-blue-600">Telegram</a>
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            <a href="https://www.instagram.com/svidomyi_vybir/" target="_blank" rel="noreferrer" className="transition-transform hover:scale-110 hover:text-fuchsia-500">📷 Instagram</a>
+            <a href="https://www.facebook.com/share/1HF1zxmYbK/" target="_blank" rel="noreferrer" className="transition-transform hover:scale-110 hover:text-blue-600">📘 Facebook</a>
           </div>
         </div>
         <div>

@@ -1,15 +1,23 @@
 import { useLang } from '../context.jsx';
 import { Section, Card } from '../components/ui.jsx';
+import { useSeo } from '../seo.js';
+
+export const SOCIALS = {
+  instagram: 'https://www.instagram.com/svidomyi_vybir/',
+  facebook: 'https://www.facebook.com/share/1HF1zxmYbK/',
+  founderInstagram: 'https://www.instagram.com/agre.sir/',
+};
 
 const team = [
-  { name: 'Олена Ковальчук', roleUk: 'Голова організації', roleEn: 'Chairperson', emoji: '👩‍💼', color: 'bg-blue-500' },
-  { name: 'Андрій Шевченко', roleUk: 'Координатор волонтерів', roleEn: 'Volunteer Coordinator', emoji: '🧑‍🌾', color: 'bg-emerald-500' },
-  { name: 'Марія Бондаренко', roleUk: 'Освітні програми', roleEn: 'Education Programs', emoji: '👩‍🏫', color: 'bg-indigo-500' },
-  { name: 'Тарас Мельник', roleUk: 'Еко-проєкти', roleEn: 'Eco Projects', emoji: '🧑‍🔬', color: 'bg-teal-500' },
+  { name: 'Влад Корженевський', roleUk: 'Засновник та голова обʼєднання', roleEn: 'Founder & Head', emoji: '🦸', color: 'grad-accent-br', instagram: SOCIALS.founderInstagram, featured: true },
+  { name: 'Координатор волонтерів', roleUk: 'Волонтерський напрям', roleEn: 'Volunteers', emoji: '🧑‍🌾', color: 'bg-emerald-500', join: true },
+  { name: 'Освітні програми', roleUk: 'Навчання та воркшопи', roleEn: 'Education', emoji: '👩‍🏫', color: 'bg-indigo-500', join: true },
+  { name: 'Еко-проєкти', roleUk: 'Екологічні акції', roleEn: 'Eco Projects', emoji: '🧑‍🔬', color: 'bg-teal-500', join: true },
 ];
 
 export default function About() {
   const { t, lang } = useLang();
+  useSeo(t('nav.about'), 'Молодіжне обʼєднання «Свідомий Вибір» — українська молодь в дії. Засновник Влад Корженевський.');
   return (
     <>
       <div className="bg-gradient-to-r from-blue-600 to-emerald-500 py-14 text-center text-white">
@@ -34,14 +42,58 @@ export default function About() {
       <Section title={t('about.team')} subtitle={lang === 'uk' ? 'Люди, які роблять усе це можливим' : 'The people who make it all possible'}>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {team.map((m) => (
-            <Card key={m.name} className="text-center">
-              <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-4xl ${m.color}`}>
+            <Card key={m.name} className={`hover-lift text-center ${m.featured ? 'ring-2 ring-amber-400/70' : ''}`}>
+              <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-4xl text-white shadow-lg ${m.color}`}>
                 {m.emoji}
               </div>
               <h3 className="mt-3 font-bold text-slate-900 dark:text-white">{m.name}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">{lang === 'uk' ? m.roleUk : m.roleEn}</p>
+              {m.instagram && (
+                <a
+                  href={m.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block rounded-full bg-gradient-to-r from-fuchsia-500 to-amber-400 px-3 py-1 text-xs font-bold text-white"
+                >
+                  📷 Instagram
+                </a>
+              )}
+              {m.join && (
+                <a href="/volunteer" className="mt-2 inline-block text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">
+                  {lang === 'uk' ? 'Твоє місце тут →' : 'Your place here →'}
+                </a>
+              )}
             </Card>
           ))}
+        </div>
+      </Section>
+
+      <Section title={lang === 'uk' ? 'Ми в соцмережах' : 'Follow us'}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <a
+            href={SOCIALS.instagram}
+            target="_blank"
+            rel="noreferrer"
+            className="hover-lift flex items-center gap-4 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-rose-500 to-amber-400 p-5 text-white shadow-lg"
+          >
+            <span className="text-4xl">📷</span>
+            <div>
+              <p className="text-lg font-extrabold">@svidomyi_vybir</p>
+              <p className="text-sm text-white/85">{lang === 'uk' ? 'Instagram обʼєднання — 1200+ підписників' : 'Our Instagram — 1200+ followers'}</p>
+            </div>
+          </a>
+          <a
+            href={SOCIALS.facebook}
+            target="_blank"
+            rel="noreferrer"
+            className="hover-lift flex items-center gap-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-800 p-5 text-white shadow-lg"
+          >
+            <span className="text-4xl">📘</span>
+            <div>
+              <p className="text-lg font-extrabold">Facebook</p>
+              <p className="text-sm text-white/85">{lang === 'uk' ? 'Сторінка обʼєднання — новини та події' : 'Our page — news and events'}</p>
+            </div>
+          </a>
         </div>
       </Section>
 

@@ -117,6 +117,70 @@ export function seedIfEmpty() {
     }
   );
 
+  // минулі події — реальні формати активності обʼєднання
+  db.events.push(
+    {
+      id: uid('e-'),
+      title: 'Святкування 6-річчя обʼєднання «Свідомий Вибір»',
+      description:
+        'Річниця обʼєднання: підсумки шести років роботи, вдячність активним членам, концертна програма та спільне фото. Дякуємо всім, хто був з нами цей час!',
+      category: 'meeting',
+      startsAt: daysFromNow(-95, 17),
+      location: 'Міський будинок культури',
+      image: '',
+      capacity: 0,
+      createdAt: daysFromNow(-120, 9),
+    },
+    {
+      id: uid('e-'),
+      title: 'Благодійний концерт-фандрайзинг',
+      description:
+        'Виступи молодих гуртів та солістів, благодійний збір на потреби обʼєднання та підтримку волонтерських ініціатив. Разом зібрали чималу суму — дякуємо кожному гостеві!',
+      category: 'other',
+      startsAt: daysFromNow(-70, 18),
+      location: 'Актова зала коледжу',
+      image: '',
+      capacity: 0,
+      createdAt: daysFromNow(-90, 9),
+    },
+    {
+      id: uid('e-'),
+      title: 'Благодійний аукціон',
+      description:
+        'Лоти від членів обʼєднання та партнерів: hand-made вироби, сертифікати, сувеніри. Усі зібрані кошти спрямовані на реалізацію молодіжних проєктів.',
+      category: 'other',
+      startsAt: daysFromNow(-140, 17),
+      location: 'Простір обʼєднання',
+      image: '',
+      capacity: 0,
+      createdAt: daysFromNow(-160, 9),
+    },
+    {
+      id: uid('e-'),
+      title: 'Футбольний турнір серед молоді',
+      description:
+        'Товариський футбольний турнір команд молодіжних обʼєднань міста. Спорт, командний дух і справжні емоції!',
+      category: 'other',
+      startsAt: daysFromNow(-45, 11),
+      location: 'Міський стадіон',
+      image: '',
+      capacity: 0,
+      createdAt: daysFromNow(-60, 9),
+    },
+    {
+      id: uid('e-'),
+      title: 'Еко-акція: прибирання парку',
+      description:
+        'Разом із волонтерами прибрали територію парку та розділили сміття для переробки. Ще один свідомий вибір на користь довкілля!',
+      category: 'volunteering',
+      startsAt: daysFromNow(-25, 10),
+      location: 'Міський парк',
+      image: '',
+      capacity: 0,
+      createdAt: daysFromNow(-35, 9),
+    }
+  );
+
   db.events.push(
     {
       id: uid('e-'),

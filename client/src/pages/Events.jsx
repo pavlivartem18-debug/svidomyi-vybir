@@ -21,6 +21,7 @@ export default function Events() {
   const [to, setTo] = useState('');
   const [selectedDay, setSelectedDay] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('upcoming');
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -33,24 +34,41 @@ export default function Events() {
       .finally(() => setLoading(false));
   }, [category, from, to]);
 
+  const now = new Date().toISOString();
+  const upcoming = useMemo(
+    () => events.filter((e) => e.startsAt >= now).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+    [events]
+  );
+  const past = useMemo(
+    () => events.filter((e) => e.startsAt < now).sort((a, b) => b.startsAt.localeCompare(a.startsAt)),
+    [events]
+  );
+
   const visible = useMemo(() => {
-    if (!selectedDay) return events;
+    const list = tab === 'upcoming' ? upcoming : past;
+    if (!selectedDay) return list;
     const key = dayKey(new Date(selectedDay));
-    return events.filter((e) => dayKey(new Date(e.startsAt)) === key);
-  }, [events, selectedDay]);
+    return list.filter((e) => dayKey(new Date(e.startsAt)) === key);
+  }, [tab, upcoming, past, selectedDay]);
 
   const catOptions = [['', t('filter.all')], ...Object.entries(eventCats[lang])];
+  const tabCls = (active) =>
+    `rounded-full px-5 py-2 text-sm font-bold transition ${
+      active
+        ? 'grad-accent-bg text-white shadow-accent'
+        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+    }`;
 
   return (
     <>
-      <div className="bg-gradient-to-r from-blue-600 to-emerald-500 py-12 text-center text-white">
+      <div className="grad-accent-br py-12 text-center text-white">
         <h1 className="text-3xl font-extrabold">{t('nav.events')}</h1>
       </div>
 
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-[320px,1fr]">
         <aside className="space-y-4">
-          <Calendar events={events} selected={selectedDay} onSelect={(d) => setSelectedDay(d)} />
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+          <Calendar events={upcoming} selected={selectedDay} onSelect={(d) => setSelectedDay(d)} />
+          <div className="shadow-soft space-y-3 rounded-2xl border border-slate-100 bg-white p-4 dark:border-slate-700/60 dark:bg-slate-800">
             <Select label={t('filter.category')} options={catOptions} value={category} onChange={(e) => setCategory(e.target.value)} />
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-slate-700 dark:text-slate-200">{t('filter.from')}</span>
@@ -72,6 +90,14 @@ export default function Events() {
         </aside>
 
         <div>
+          <div className="mb-5 flex gap-2">
+            <button onClick={() => setTab('upcoming')} className={tabCls(tab === 'upcoming')}>
+              🗓️ {lang === 'uk' ? `Майбутні (${upcoming.length})` : `Upcoming (${upcoming.length})`}
+            </button>
+            <button onClick={() => setTab('past')} className={tabCls(tab === 'past')}>
+              📜 {lang === 'uk' ? `Минулі (${past.length})` : `Past (${past.length})`}
+            </button>
+          </div>
           {selectedDay && (
             <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
               {new Date(selectedDay).toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', { day: 'numeric', month: 'long' })}: {visible.length}
@@ -83,7 +109,11 @@ export default function Events() {
             <Empty>{lang === 'uk' ? 'Подій не знайдено' : 'No events found'}</Empty>
           ) : (
             <div className="grid gap-4">
-              {visible.map((e) => <EventCard key={e.id} event={e} />)}
+              {visible.map((e, i) => (
+                <div key={e.id} className="anim-fade-up" style={{ animationDelay: `${i * 0.07}s` }}>
+                  <EventCard event={e} />
+                </div>
+              ))}
             </div>
           )}
         </div>

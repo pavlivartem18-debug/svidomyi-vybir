@@ -64,7 +64,7 @@ export default function Home() {
         </div>
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <p className="anim-fade-up mx-auto mb-5 w-fit rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur" style={{ animationDelay: '0s' }}>
-            {lang === 'uk' ? '✊ Молодь, що змінює світ' : '✊ Youth changing the world'}
+            {lang === 'uk' ? '🇺🇦 Українська молодь в дії' : '🇺🇦 Ukrainian youth in action'}
           </p>
           <h1 className="anim-fade-up mx-auto max-w-3xl text-4xl font-extrabold leading-tight drop-shadow-md sm:text-6xl" style={{ animationDelay: '0.1s' }}>
             {t('hero.title')}
@@ -151,9 +151,9 @@ export default function Home() {
             <div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('home.about')}</h2>
               <p className="mt-3 text-slate-600 dark:text-slate-300">
-                {lang === 'uk'
-                  ? 'Молодіжне обʼєднання «Свідомий Вибір» працює з 2015 року. Ми організовуємо освітні програми, еко-акції та волонтерські проєкти, проводимо засідання з поіменним голосуванням. За цей час до наших ініціатив долучилися понад 3 000 людей.'
-                  : 'Svidomyi Vybir Youth Association has been operating since 2015. We run educational programs, eco-actions, volunteer projects and meetings with named voting. Over 3,000 people have joined our initiatives.'}
+              {lang === 'uk'
+                ? 'Молодіжне обʼєднання «Свідомий Вибір» — українська молодь в дії 🇺🇦. Понад 6 років ми проводимо освітні програми, еко-акції, благодійні концерти й аукціони, футбольні турніри та засідання з поіменним голосуванням. Засновник — Влад Корженевський.'
+                : 'Svidomyi Vybir Youth Association — Ukrainian youth in action 🇺🇦. For over 6 years we have run education programs, eco-actions, charity concerts and auctions, football tournaments and meetings with named voting. Founder — Vlad Korzhenevskyi.'}
               </p>
               <Btn to="/about" variant="outline" className="mt-4">{t('nav.about')}</Btn>
             </div>

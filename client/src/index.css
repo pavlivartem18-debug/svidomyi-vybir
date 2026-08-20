@@ -70,6 +70,7 @@ html.anim-off * {
   filter: blur(70px);
   opacity: 0.16;
   animation: auroraDrift 26s ease-in-out infinite alternate;
+  will-change: transform;
 }
 .bgfx-aurora i:nth-child(1) { background: var(--accent-from); top: -20%; left: -10%; }
 .bgfx-aurora i:nth-child(2) { background: var(--accent-to); bottom: -25%; right: -12%; animation-duration: 32s; animation-direction: alternate-reverse; }
@@ -78,6 +79,23 @@ html.anim-off * {
   0% { transform: translate(0, 0) scale(1) rotate(0deg); }
   50% { transform: translate(8vw, -5vh) scale(1.15) rotate(20deg); }
   100% { transform: translate(-6vw, 6vh) scale(0.95) rotate(-15deg); }
+}
+
+/* на телефонах фони легші: менший розмиття і розміри — жодних підгальмовувань */
+@media (max-width: 640px) {
+  .bgfx-aurora i {
+    filter: blur(42px);
+    opacity: 0.2;
+  }
+  .bgfx-grid::after {
+    display: none;
+  }
+}
+
+/* швидший відгук кнопок на сенсорних екранах */
+button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* зорі: мерехтливі точки з повільним дрейфом */

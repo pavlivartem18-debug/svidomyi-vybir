@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from './api.js';
 import { useAuth, useLang, useTheme } from './context.jsx';
 
 /* ============ Персоналізація інтерфейсу ============ */
 
 export const ACCENTS = [
+  { key: 'ukraine', label: 'Україна 💙💛', from: '#0057b7', to: '#eab308' },
   { key: 'ocean', label: 'Океан', from: '#2563eb', to: '#059669' },
   { key: 'indigo', label: 'Індіго', from: '#4f46e5', to: '#7c3aed' },
   { key: 'sunset', label: 'Захід', from: '#f59e0b', to: '#ef4444' },
@@ -23,7 +25,7 @@ export const BACKGROUNDS = [
 ];
 
 const FONT_SCALES = { s: '15px', m: '16px', l: '18px' };
-const DEFAULTS = { accent: 'ocean', bg: 'aurora', fontScale: 'm', animLevel: 'full' };
+const DEFAULTS = { accent: 'ukraine', bg: 'aurora', fontScale: 'm', animLevel: 'full' };
 
 const PersonalizeCtx = createContext();
 export const usePersonalize = () => useContext(PersonalizeCtx);
@@ -116,8 +118,10 @@ export function AnimatedBackground() {
 }
 
 function Stars() {
+  // на маленьких екранах менше елементів — плавність на телефонах
+  const count = typeof window !== 'undefined' && window.innerWidth < 640 ? 40 : 70;
   const [stars] = useState(() =>
-    Array.from({ length: 70 }).map(() => ({
+    Array.from({ length: count }).map(() => ({
       left: Math.random() * 100,
       top: Math.random() * 100,
       size: 1.5 + Math.random() * 2.5,
@@ -135,8 +139,9 @@ function Stars() {
 }
 
 function Bubbles() {
+  const count = typeof window !== 'undefined' && window.innerWidth < 640 ? 9 : 16;
   const [bubbles] = useState(() =>
-    Array.from({ length: 16 }).map(() => ({
+    Array.from({ length: count }).map(() => ({
       left: Math.random() * 100,
       size: 40 + Math.random() * 120,
       dur: 14 + Math.random() * 16,
@@ -155,11 +160,19 @@ function Bubbles() {
 /* ---------- Панель налаштувань ---------- */
 export function SettingsModal({ onClose }) {
   const { settings, save, reset } = usePersonalize();
-  const { t, lang } = useLang();
+  const { lang } = useLang();
 
   const label = (uk, en) => (lang === 'uk' ? uk : en);
 
-  return (
+  // блокуємо скрол фону, поки панель відкрита
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  // портал у body: шапка має backdrop-filter, який ламає fixed-позиціонування на мобільних
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div
         className="anim-slide-down max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl dark:bg-slate-800 sm:rounded-3xl"
@@ -262,6 +275,5 @@ export function SettingsModal({ onClose }) {
           ↺ {label('Скинути до стандартних', 'Reset to defaults')}
         </button>
       </div>
-    </div>
-  );
+    </div>, document.body);
 }

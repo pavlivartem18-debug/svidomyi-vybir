@@ -56,10 +56,15 @@ export default function Contact() {
               {lang === 'uk' ? 'Ми в соцмережах' : 'Social media'}
             </h3>
             <div className="flex flex-wrap gap-2 text-sm">
-              <a className="rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700" href="https://facebook.com" target="_blank" rel="noreferrer">Facebook</a>
-              <a className="rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1.5 text-white" href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a>
-              <a className="rounded-lg bg-sky-500 px-3 py-1.5 text-white hover:bg-sky-600" href="https://t.me" target="_blank" rel="noreferrer">Telegram</a>
+              <a className="rounded-lg bg-gradient-to-r from-fuchsia-500 via-rose-500 to-amber-400 px-4 py-2 font-bold text-white shadow-lg transition-transform hover:scale-105" href="https://www.instagram.com/svidomyi_vybir/" target="_blank" rel="noreferrer">📷 @svidomyi_vybir</a>
+              <a className="rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 px-4 py-2 font-bold text-white shadow-lg transition-transform hover:scale-105" href="https://www.facebook.com/share/1HF1zxmYbK/" target="_blank" rel="noreferrer">📘 Facebook</a>
             </div>
+            <p className="mt-3 text-xs text-slate-400">
+              {lang === 'uk' ? 'Засновник обʼєднання: ' : 'Founder: '}
+              <a href="https://www.instagram.com/agre.sir/" target="_blank" rel="noreferrer" className="font-bold text-slate-600 hover:text-fuchsia-500 dark:text-slate-300">
+                Влад Корженевський · @agre.sir 📷
+              </a>
+            </p>
           </Card>
         </div>
       </div>
