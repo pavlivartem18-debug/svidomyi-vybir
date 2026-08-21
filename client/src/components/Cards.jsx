@@ -10,7 +10,7 @@ export function NewsCard({ news }) {
     <article className="group hover-lift shadow-soft flex h-full flex-col overflow-hidden rounded-2xl bg-white dark:bg-slate-800">
       <div className="relative h-44 w-full overflow-hidden bg-gradient-to-br from-blue-500 to-emerald-400">
         {news.image && (
-          <img src={imgUrl(news.image)} alt={news.title} className="zoom-img h-full w-full object-cover" />
+          <img src={imgUrl(news.image)} alt={news.title} loading="lazy" decoding="async" className="zoom-img h-full w-full object-cover" />
         )}
         <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-blue-700 shadow-sm backdrop-blur dark:bg-slate-900/80 dark:text-blue-300">
           {newsCats[lang][news.category] || news.category}

@@ -60,7 +60,7 @@ export default function Members() {
             <Card key={m.id}>
               <div className="flex items-center gap-3">
                 {m.avatar ? (
-                  <img src={imgUrl(m.avatar)} alt="" className="h-14 w-14 rounded-full object-cover" />
+                  <img src={imgUrl(m.avatar)} alt="" loading="lazy" className="h-14 w-14 rounded-full object-cover" />
                 ) : (
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-xl dark:bg-slate-700">
                     {m.name?.[0] || '👤'}

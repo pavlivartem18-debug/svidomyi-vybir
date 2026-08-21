@@ -94,7 +94,7 @@ export default function NewsDetail() {
     <article className="mx-auto max-w-3xl px-4 py-10">
       <Btn to="/news" variant="ghost" className="mb-4">← {t('nav.news')}</Btn>
       <div className="h-64 w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-emerald-400">
-        {news.image && <img src={imgUrl(news.image)} alt={news.title} className="h-full w-full object-cover" />}
+        {news.image && <img src={imgUrl(news.image)} alt={news.title} loading="lazy" className="h-full w-full object-cover" />}
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Badge color="blue">{newsCats[lang][news.category] || news.category}</Badge>

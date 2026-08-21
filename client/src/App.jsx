@@ -20,6 +20,7 @@ import VoteDetail from './pages/VoteDetail.jsx';
 import Surveys from './pages/Surveys.jsx';
 import Downloads from './pages/Downloads.jsx';
 import Members from './pages/Members.jsx';
+import Chat from './pages/Chat.jsx';
 import Partners from './pages/Partners.jsx';
 import Jobs from './pages/Jobs.jsx';
 import Donate from './pages/Donate.jsx';
@@ -63,6 +64,7 @@ function Shell() {
           <Route path="/meetings/:id/protocol" element={<Protected adminOnly><MeetingProtocol /></Protected>} />
           <Route path="/votes/:id" element={<Protected><VoteDetail /></Protected>} />
           <Route path="/members" element={<Protected><Members /></Protected>} />
+          <Route path="/chat" element={<Protected><Chat /></Protected>} />
           <Route path="/partners" element={<Partners />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/donate" element={<Donate />} />

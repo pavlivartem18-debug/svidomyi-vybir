@@ -169,18 +169,24 @@ export function CountUp({ value, duration = 1300, suffix = '' }) {
   return <>{n}{suffix}</>;
 }
 
-/* 3D-нахил картки за курсором миші */
+/* 3D-нахил картки за курсором миші — з обмеженням до кадру анімації (без провисань) */
 export function Tilt({ children, className = '', max = 7 }) {
   const ref = useRef(null);
+  const raf = useRef(0);
   const onMove = (e) => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5;
-    const y = (e.clientY - r.top) / r.height - 0.5;
-    el.style.transform = `perspective(800px) rotateY(${x * max}deg) rotateX(${-y * max}deg) translateY(-4px)`;
+    const ev = e;
+    cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(() => {
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const x = (ev.clientX - r.left) / r.width - 0.5;
+      const y = (ev.clientY - r.top) / r.height - 0.5;
+      el.style.transform = `perspective(800px) rotateY(${x * max}deg) rotateX(${-y * max}deg) translateY(-4px)`;
+    });
   };
   const onLeave = () => {
+    cancelAnimationFrame(raf.current);
     if (ref.current) ref.current.style.transform = '';
   };
   return (

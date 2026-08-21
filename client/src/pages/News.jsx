@@ -9,18 +9,25 @@ export default function News() {
   const { t, lang } = useLang();
   const [news, setNews] = useState([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // дебаунс пошуку: запит лише після паузи в наборі — без спаму на кожну літеру
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     const params = new URLSearchParams();
-    if (search) params.set('search', search);
+    if (debouncedSearch) params.set('search', debouncedSearch);
     if (category) params.set('category', category);
     setLoading(true);
     api('/api/news?' + params.toString())
       .then(setNews)
       .finally(() => setLoading(false));
-  }, [search, category]);
+  }, [debouncedSearch, category]);
 
   return (
     <>

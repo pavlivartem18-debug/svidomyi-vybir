@@ -166,7 +166,7 @@ function Profile() {
       <form onSubmit={save} className="space-y-4">
         <div className="flex items-center gap-4">
           {user.avatar ? (
-            <img src={imgUrl(user.avatar)} alt="" className="h-20 w-20 rounded-full object-cover" />
+            <img src={imgUrl(user.avatar)} alt="" loading="lazy" className="h-20 w-20 rounded-full object-cover" />
           ) : (
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-3xl dark:bg-slate-700">
               {user.name?.[0] || '👤'}

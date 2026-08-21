@@ -28,15 +28,21 @@ export default function Home() {
     });
   }, []);
 
-  // легкий паралакс: декоративні емодзі ледве рухаються за курсором
+  // легкий паралакс: декоративні емодзі рухаються за курсором не частіше кадру анімації
+  const heroRaf = useRef(0);
   const heroMove = (e) => {
-    const el = floatersRef.current;
-    if (!el) return;
-    const x = (e.clientX / window.innerWidth - 0.5) * 26;
-    const y = (e.clientY / window.innerHeight - 0.5) * 20;
-    el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    const ev = e;
+    cancelAnimationFrame(heroRaf.current);
+    heroRaf.current = requestAnimationFrame(() => {
+      const el = floatersRef.current;
+      if (!el) return;
+      const x = (ev.clientX / window.innerWidth - 0.5) * 26;
+      const y = (ev.clientY / window.innerHeight - 0.5) * 20;
+      el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    });
   };
   const heroLeave = () => {
+    cancelAnimationFrame(heroRaf.current);
     if (floatersRef.current) floatersRef.current.style.transform = '';
   };
 

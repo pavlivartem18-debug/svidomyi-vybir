@@ -96,6 +96,7 @@ export default function Navbar() {
     ['/meetings', t('nav.meetings')],
     ['/surveys', t('nav.surveys')],
     ['/members', lang === 'uk' ? 'Каталог' : 'Directory'],
+    ['/chat', '💬 ' + (lang === 'uk' ? 'Чат' : 'Chat')],
   ];
 
   const item = ({ isActive }) =>

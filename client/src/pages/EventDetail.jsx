@@ -112,7 +112,7 @@ export default function EventDetail() {
     <div className="mx-auto max-w-3xl px-4 py-10">
       <Btn to="/events" variant="ghost" className="mb-4">← {t('nav.events')}</Btn>
       <div className="h-56 w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-emerald-400">
-        {event.image && <img src={imgUrl(event.image)} alt={event.title} className="h-full w-full object-cover" />}
+        {event.image && <img src={imgUrl(event.image)} alt={event.title} loading="lazy" className="h-full w-full object-cover" />}
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Badge color="green">{eventCats[lang][event.category] || event.category}</Badge>

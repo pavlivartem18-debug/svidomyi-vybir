@@ -33,7 +33,7 @@ export default function Partners() {
           {partners.map((p) => (
             <Card key={p.id} className="text-center">
               {p.logo && (
-                <img src={imgUrl(p.logo)} alt={p.name} className="mx-auto h-16 rounded-lg object-contain" />
+                <img src={imgUrl(p.logo)} alt={p.name} loading="lazy" className="mx-auto h-16 rounded-lg object-contain" />
               )}
               <h3 className="mt-2 font-bold text-slate-900 dark:text-white">{p.name}</h3>
               {p.description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{p.description}</p>}

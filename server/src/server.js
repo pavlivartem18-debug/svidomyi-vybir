@@ -1572,6 +1572,56 @@ app.get('/robots.txt', (req, res) => {
   res.send(`User-agent: *\nAllow: /\nSitemap: ${base}/sitemap.xml\n`);
 });
 
+/* ---------------- ЧАТ УЧАСНИКІВ ---------------- */
+
+let lastMsgAt = {}; // простий ліміт: не частіше ніж 1 повідомлення на 2 секунди
+
+app.get('/api/chat', auth(), memberOnly, (req, res) => {
+  const db = getDb();
+  let list = db.chatMessages;
+  // клієнт передає ?after=... — віддаємо лише нові (для тих, хто вже в чаті)
+  if (req.query.after) {
+    list = list.filter((m) => m.at > req.query.after);
+  } else {
+    list = list.slice(-50); // перший вхід — останні 50 повідомлень
+  }
+  res.json(list);
+});
+
+app.post('/api/chat', auth(), memberOnly, (req, res) => {
+  const text = (req.body.text || '').trim();
+  if (!text) return bad(res, 'Порожнє повідомлення');
+  if (text.length > 500) return bad(res, 'Повідомлення задовге (максимум 500 символів)');
+  const last = lastMsgAt[req.user.id] || 0;
+  if (Date.now() - last < 2000) return bad(res, 'Не так швидко 🙂 зачекайте секунду', 429);
+
+  lastMsgAt[req.user.id] = Date.now();
+  const msg = {
+    id: uid('msg-'),
+    userId: req.user.id,
+    userName: `${req.user.name} ${req.user.surname || ''}`.trim(),
+    userAvatar: req.user.avatar || '',
+    userRole: req.user.role,
+    text,
+    at: new Date().toISOString(),
+  };
+  const db = getDb();
+  db.chatMessages.push(msg);
+  if (db.chatMessages.length > 500) db.chatMessages = db.chatMessages.slice(-500); // тримаємо останні 500
+  save();
+  res.status(201).json(msg);
+});
+
+app.delete('/api/chat/:id', auth(), memberOnly, (req, res) => {
+  const db = getDb();
+  const msg = db.chatMessages.find((m) => m.id === req.params.id);
+  if (!msg) return bad(res, 'Повідомлення не знайдено', 404);
+  if (msg.userId !== req.user.id && req.user.role !== 'admin') return bad(res, 'Можна видаляти лише свої повідомлення', 403);
+  db.chatMessages = db.chatMessages.filter((m) => m.id !== req.params.id);
+  save();
+  res.json({ message: 'Видалено' });
+});
+
 /* ---------------- СТАТИКА (зібраний фронтенд) ---------------- */
 
 const DIST = path.join(__dirname, '..', '..', 'client', 'dist');

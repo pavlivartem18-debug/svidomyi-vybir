@@ -27,6 +27,7 @@ const emptyDb = {
   notifications: [],
   auditLogs: [],
   comments: [],
+  chatMessages: [],
   partners: [],
   jobs: [],
   loginLogs: [],
