@@ -1154,16 +1154,18 @@ export default function Admin() {
         </Btn>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-700">
-        {tabs.map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-3 py-2 text-sm transition hover:text-blue-600 sm:px-4 ${tab === key ? active : 'text-slate-500 dark:text-slate-400'}`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="-mx-4 mt-6 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+        <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+          {tabs.map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm transition hover:text-blue-600 ${tab === key ? active : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-6">
